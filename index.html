@@ -7786,7 +7786,7 @@ function ordsFiltered(){
   var rows=xkFilter(); if(xkHideDone)rows=rows.filter(x=>x.o.tt!=='Da xuat');
   var map={},order=[];
   rows.forEach(({o,i})=>{ if(!map[o.madon]){map[o.madon]={madon:o.madon,o:o,lines:[],idx:[]};order.push(o.madon);} map[o.madon].lines.push(o); map[o.madon].idx.push(i); });
-  return order.map(m=>map[m]);
+  return order.map(m=>map[m]).sort(function(a,b){ var d=(b.o.ngay||'').localeCompare(a.o.ngay||''); if(d)return d; return Math.max.apply(null,b.idx)-Math.max.apply(null,a.idx); });
 }
 function xkToggle(m){xkExpand[m]=!xkExpand[m];xkDraw();}
 function xkPick(m,val){ if(val)xkSel[m]=true; else delete xkSel[m]; xkSyncAllCb(); }
@@ -7894,7 +7894,7 @@ function xkSelAll(val){ if(!val){xkSel={};} else { ordsFiltered().forEach(g=>{if
 function xkClearSel(){xkSel={};xkDraw();}
 function xkConfirm(madon){var ids=idxOf(madon);if(!ids.length)return;var o0=DATA.orders[ids[0]];if(o0.tt==='Da xuat')return;if(o0.tthd!=='giao'){alert('Chỉ xuất được đơn đã có ĐVVC.');return;}var d=dotNow();ids.forEach(i=>{DATA.orders[i].tt='Da xuat';DATA.orders[i].dot=d;});delete xkSel[madon];save();xkBHSub='xuat';rXKBanHang();}
 function xkConfirmSel(){var ms=Object.keys(xkSel).filter(m=>xkSel[m]);var ok=ms.filter(m=>{var ids=idxOf(m);return ids.length&&DATA.orders[ids[0]].tthd==='giao'&&DATA.orders[ids[0]].tt!=='Da xuat';});if(!ok.length){alert('Chưa chọn đơn hợp lệ (tick ô vuông). Chỉ tick được đơn Đã có ĐVVC, chưa xuất.');return;}var d=dotNow();ok.forEach(m=>idxOf(m).forEach(i=>{DATA.orders[i].tt='Da xuat';DATA.orders[i].dot=d;}));xkSel={};save();alert('Đã xuất kho '+ok.length+' đơn (đợt '+d+').');xkBHSub='xuat';rXKBanHang();}
-function keoDonHaravan(){alert('Bản chạy thật: nút này gọi Haravan API (Apps Script) kéo đơn mới. Bản xem trước đang dùng đơn THẬT ngày 4-5 đã nạp.');rXKBanHang();}
+function keoDonHaravan(){ if(!SYNC.url){alert('Chưa bật đồng bộ. Kéo đơn chạy tự động phía Google. Mở ô ☁ góc trái để cấu hình.');return;} syncBadge('loading'); var u=SYNC.url+(SYNC.url.indexOf('?')>=0?'&':'?')+'action=keo'; fetch(u).then(function(r){return r.json();}).then(function(j){ if(j&&j.ok){ syncPull(function(ok){ try{seedHoan();}catch(e){} refreshAllPanels(); var ad=(j.added||0),up=(j.updated||0); alert('✓ Kéo đơn từ Haravan xong!\n• Đơn/dòng mới: '+ad+'\n• Cập nhật trạng thái: '+up+'\nĐơn mới nhất đã đưa lên đầu danh sách.'); }); } else { syncBadge('err'); alert('Kéo đơn lỗi: '+((j&&j.msg)||'không rõ')); } }).catch(function(e){ syncBadge('err'); alert('Không gọi được kéo đơn (kiểm tra mạng/đồng bộ): '+e); }); }
 function inPhieu(){
   var rows=xkFilter().filter(({o})=>o.tt==='Da xuat'&&dotPass(o));
   if(!rows.length){alert('Không có đơn để in (theo bộ lọc / đợt đã tick).');return;}
