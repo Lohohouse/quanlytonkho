@@ -7003,8 +7003,8 @@ function rSanpham(){
     <button class="btn gr" onclick="exportXLSX('tblSp','Danh muc SP')">⬇ CSV/Excel</button>
     <button class="btn" onclick="quanLyDanhMuc()">⊕ Danh mục</button>
     <button class="btn" onclick="taoMaSP()">⚙ Tạo mã SP</button>
-    <button class="btn pri" onclick="openSP(null)">+ Thêm SP</button>
-    <button class="btn pri" style="background:linear-gradient(120deg,#9a6a00,#c08a00)" onclick="openCombo(null)">+ Combo</button>
+    <button class="btn pri" onclick="openSP(null)">+ Thêm SP 新增商品</button>
+    <button class="btn pri" style="background:linear-gradient(120deg,#9a6a00,#c08a00)" onclick="openCombo(null)">+ Combo 套餐</button>
   </div>
   <div id="spBulk" style="display:none"></div>
   <div class="card scroll"><table id="tblSp"></table></div>
@@ -7060,7 +7060,7 @@ function spBulkDelete(){var ks=Object.keys(spSel);if(!ks.length)return;if(!confi
 function drawSpBulk(){var b=el('spBulk');if(!b)return;var n=Object.keys(spSel).length;if(!n){b.style.display='none';b.innerHTML='';return;}b.style.display='';
   var catOpts='<option value="">— Đổi nhóm —</option>'+Object.keys(DATA.cats).map(ck=>`<option value="${ck}">${DATA.cats[ck]}</option>`).join('');
   var stOpts='<option value="">— Đổi trạng thái —</option>'+Object.keys(DATA.statusMap).map(x=>`<option value="${x}">${DATA.statusMap[x]}</option>`).join('');
-  b.innerHTML=`<div class="bar" style="background:#1f4e2e;color:#fff;border-radius:10px;padding:9px 13px;margin:8px 0;align-items:center"><span style="background:#e8b931;color:#1f4e2e;border-radius:999px;padding:3px 12px;font-weight:700">${n}</span><span>sản phẩm đã chọn</span><span class="sub" style="color:#cfe0d4;margin-left:6px">· kéo 1 dòng đã chọn để di chuyển cả nhóm</span><div class="sp"></div><select id="bkGroup">${catOpts}</select><select id="bkType"><option value="">— Đổi loại —</option><option value="Thành phẩm">Thành phẩm</option><option value="NVL">NVL</option></select><select id="bkStatus">${stOpts}</select><button class="btn pri" onclick="spBulkApply()">✓ Áp dụng</button><button class="btn" style="background:#c0392b;color:#fff;border-color:#c0392b" onclick="spBulkDelete()">🗑 Xoá</button><button class="btn" onclick="spSelClear()">✗ Bỏ chọn</button></div>`;
+  b.innerHTML=`<div class="bar" style="background:#1f4e2e;color:#fff;border-radius:10px;padding:9px 13px;margin:8px 0;align-items:center"><span style="background:#e8b931;color:#1f4e2e;border-radius:999px;padding:3px 12px;font-weight:700">${n}</span><span>sản phẩm đã chọn</span><span class="sub" style="color:#cfe0d4;margin-left:6px">· kéo 1 dòng đã chọn để di chuyển cả nhóm</span><div class="sp"></div><select id="bkGroup">${catOpts}</select><select id="bkType"><option value="">— Đổi loại —</option><option value="Thành phẩm">Thành phẩm</option><option value="NVL">NVL</option></select><select id="bkStatus">${stOpts}</select><button class="btn pri" onclick="spBulkApply()">✓ Áp dụng</button><button class="btn" style="background:#c0392b;color:#fff;border-color:#c0392b" onclick="spBulkDelete()">🗑 Xoá</button><button class="btn" onclick="spSelClear()">✗ Bỏ chọn 取消選擇</button></div>`;
 }
 function spBulkApply(){var ks=Object.keys(spSel);if(!ks.length)return;var ck=el('bkGroup').value,t=el('bkType').value,st=el('bkStatus').value;
   if(!ck&&!t&&!st){alert('Chọn ít nhất 1 thay đổi: nhóm / loại / trạng thái.');return;}
@@ -7354,7 +7354,7 @@ function rTonkho(){
     <select onchange="tonCat=this.value;rTonDraw()" style="font-weight:600">${catOpts}</select>
     <select onchange="tonWarn=this.value;rTonDraw()" style="font-weight:600">${warnOpts}</select>
     <input id="tonFind" placeholder="Tìm SKU / tên · 搜尋" value="${tonFind}" oninput="tonApply()" style="flex:1;min-width:150px">
-    <div class="sp"></div><button class="btn" onclick="tonHideSel(true)">🚫 Ẩn đã chọn</button><button class="btn" onclick="tonHideSel(false)">↩ Bỏ ẩn</button><label class="sub" style="display:inline-flex;align-items:center;gap:4px;margin:0 4px"><input type="checkbox" ${tonShowHidden?'checked':''} onchange="tonShowHidden=this.checked;rTonkho()"> Hiện mã đã ẩn</label><button class="btn gr" onclick="exportXLSX('tblTon','Theo doi ton')">⬇ Xuất Excel</button></div>
+    <div class="sp"></div><button class="btn" onclick="tonHideSel(true)">🚫 Ẩn đã chọn</button><button class="btn" onclick="tonHideSel(false)">↩ Bỏ ẩn</button><label class="sub" style="display:inline-flex;align-items:center;gap:4px;margin:0 4px"><input type="checkbox" ${tonShowHidden?'checked':''} onchange="tonShowHidden=this.checked;rTonkho()"> Hiện mã đã ẩn</label><button class="btn gr" onclick="exportXLSX('tblTon','Theo doi ton')">⬇ Xuất Excel 匯出</button></div>
   <div id="tonCount" class="sub" style="margin:0 0 8px;font-weight:500"></div>
   <div class="card scroll"><table id="tblTon"></table></div>
   <div class="note">Áp tất cả mã SP. <b>Số tồn</b> = Tồn đầu + Tồn mới − Tổng xuất. <b>TB/ngày</b> chia theo số ngày <b>đã chạy</b> trong kỳ (26 → hôm nay). <b>Cảnh báo</b>: dưới ngưỡng (sửa từng mã) → cần đặt thêm; trên 2 tháng → tồn lâu.</div>`;
@@ -7423,16 +7423,18 @@ function rTonDraw(){
 
 /* ---- XUẤT–NHẬP SẢN XUẤT ---- */
 let nxSub='xuat';
+let nxF={thang:'',tuNgay:'',denNgay:''};
+function nxApply(){nxF.thang=v('nxThang');nxF.tuNgay=v('nxTu');nxF.denNgay=v('nxDen');rNhapxuat();}
 function ensureNx(){if(!DATA.nx)DATA.nx=[];if(!DATA.nxPurposes)DATA.nxPurposes=['Chiết sơn','Sản xuất','Mua thêm','Điều chỉnh kiểm kho','Hàng lỗi','Khác'];}
 function nxNextMa(loai,ngay){var pre=loai==='xuat'?'XK':'NK';var ym=(ngay||'').slice(0,7);var seq=(DATA.nx||[]).filter(r=>r.loai===loai&&(r.ngay||'').slice(0,7)===ym).length+1;return pre+ymd_(ngay)+'-'+seq;}
 function rNhapxuat(){ ensureNx();
   el('p-nhapxuat').innerHTML=H('Xuất–Nhập kho sản xuất','產品出入庫')+`
   <div class="tabs2" style="margin-top:12px"><button class="${nxSub==='xuat'?'on':''}" onclick="nxSub='xuat';rNhapxuat()">↗ Xuất kho / 出庫</button><button class="${nxSub==='nhap'?'on':''}" onclick="nxSub='nhap';rNhapxuat()">↙ Nhập kho / 入庫</button></div>
-  <div class="bar"><button class="btn pri" onclick="nxForm()">+ Thêm phiếu ${nxSub==='xuat'?'xuất':'nhập'}</button><div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblNx','${nxSub==='xuat'?'Xuat kho':'Nhap kho'}')">⬇ Excel</button></div>
+  ${(function(){var ms=uniq(DATA.nx.map(function(r){return (r.ngay||'').slice(0,7);}).filter(Boolean)).sort();return '<div class="bar"><button class="btn pri" onclick="nxForm()">+ Thêm phiếu '+(nxSub==='xuat'?'xuất 出庫單':'nhập 入庫單')+'</button><select id="nxThang" onchange="nxApply()"><option value="">Tháng 月份: tất cả</option>'+ms.map(function(m){return '<option '+(nxF.thang===m?'selected':'')+'>'+m+'</option>';}).join('')+'</select><span class="sub">Từ 從</span><input id="nxTu" type="date" value="'+nxF.tuNgay+'" onchange="nxApply()" style="width:140px"><span class="sub">đến 到</span><input id="nxDen" type="date" value="'+nxF.denNgay+'" onchange="nxApply()" style="width:140px"><div class="sp"></div><button class="btn gr" onclick="exportXLSX(\'tblNx\',\''+(nxSub==='xuat'?'Xuat kho':'Nhap kho')+'\')">⬇ Excel 匯出</button></div>';})()}
   <div class="card scroll"><table id="tblNx"></table></div>
   <div class="note">${nxSub==='xuat'?'<b>Xuất kho sản xuất</b> (tiêu hao NVL khi chiết/pha…) — tự trừ vào cột <b>Sản xuất</b> của Theo dõi tồn. Mã: <b>XK+YYMMDD+STT tháng</b>.':'<b>Nhập kho</b> (mua thêm / sản xuất ra thành phẩm) — tự cộng vào cột <b>Nhập kho</b> của Theo dõi tồn. Mã: <b>NK+YYMMDD+STT tháng</b>.'}</div>`;
-  var h=`<tr><th>Mã ${nxSub==='xuat'?'XK':'NK'}</th><th>Ngày</th><th>Mã SKU</th><th>Tên sản phẩm</th><th>ĐVT</th><th>Mục đích</th><th class="r">Số lượng</th><th>Người</th><th>Chú thích</th><th></th></tr>`;
-  var rows=DATA.nx.map((r,i)=>({r,i})).filter(x=>x.r.loai===nxSub);
+  var h=`<tr><th>Mã ${nxSub==='xuat'?'XK':'NK'}<br><span class="zh">單號</span></th><th>Ngày<br><span class="zh">日期</span></th><th>Mã SKU<br><span class="zh">編號</span></th><th>Tên sản phẩm<br><span class="zh">品名</span></th><th>ĐVT<br><span class="zh">單位</span></th><th>Mục đích<br><span class="zh">目的</span></th><th class="r">Số lượng<br><span class="zh">數量</span></th><th>Người<br><span class="zh">人員</span></th><th>Chú thích<br><span class="zh">備註</span></th><th></th></tr>`;
+  var rows=DATA.nx.map((r,i)=>({r,i})).filter(x=>x.r.loai===nxSub&&(!nxF.thang||(x.r.ngay||'').slice(0,7)===nxF.thang)&&(!nxF.tuNgay||x.r.ngay>=nxF.tuNgay)&&(!nxF.denNgay||x.r.ngay<=nxF.denNgay));
   if(!rows.length)h+=`<tr><td colspan="10" class="sub" style="text-align:center;padding:14px">Chưa có phiếu. Bấm "+ Thêm".</td></tr>`;
   rows.forEach(x=>{var r=x.r;h+=`<tr><td class="mono">${r.ma||''}</td><td>${r.ngay}</td><td class="mono">${r.code}</td><td>${nm(r.code)}</td><td>${r.dvt||unit(r.code)}</td><td>${r.mucdich||''}</td><td class="r" style="color:${nxSub==='xuat'?'var(--red)':'var(--green)'};font-weight:600">${nxSub==='xuat'?'−':'+'}${num(r.sl)}</td><td>${r.nguoi||''}</td><td class="sub">${r.ghichu||''}</td><td><button class="btn" style="padding:1px 7px;color:var(--red)" onclick="nxDel(${x.i})">🗑</button></td></tr>`;});
   el('tblNx').innerHTML=h;
@@ -7543,7 +7545,7 @@ function rNoiBo(){ ensureXK2();
      <select id="xnbThang" onchange="xnbApply()">${opt(months,xnbF.thang,'Tháng 月份: tất cả')}</select>
      <input id="xnbNgay" type="date" value="${xnbF.ngay}" onchange="xnbApply()" style="width:150px">
      <select id="xnbNguoi" onchange="xnbApply()">${opt(nguois,xnbF.nguoi,'Người lãnh: tất cả')}</select>
-     <div class="sp"></div><button class="btn pri" onclick="xnbForm(-1)">+ Thêm xuất nội bộ</button><button class="btn gr" onclick="exportXLSX('tblXNB','Xuat noi bo')">⬇ Excel</button></div>
+     <div class="sp"></div><button class="btn pri" onclick="xnbForm(-1)">+ Thêm xuất nội bộ</button><button class="btn gr" onclick="exportXLSX('tblXNB','Xuat noi bo')">⬇ Excel 匯出</button></div>
    <div class="card scroll"><table id="tblXNB"><tr><th>Ngày</th><th>Bộ phận</th><th>SKU</th><th>Tên SP</th><th>ĐVT</th><th class="r">SL</th><th>Loại</th><th>Chú thích</th><th>Người lãnh</th><th></th></tr>${body}</table></div>
    <div class="note">Xuất kho dùng nội bộ. Số liệu đã đẩy vào cột <b>"Nội bộ"</b> của Theo dõi tồn.</div>`;
 }
@@ -7578,7 +7580,7 @@ function rHoatDong(){ ensureXK2();
      <select id="xhdThang" onchange="xhdApply()">${opt(months,xhdF.thang,'Tháng 月份: tất cả')}</select>
      <input id="xhdNgay" type="date" value="${xhdF.ngay}" onchange="xhdApply()" style="width:150px">
      <select id="xhdNguoi" onchange="xhdApply()">${opt(nguois,xhdF.nguoi,'Người lãnh: tất cả')}</select>
-     <div class="sp"></div><button class="btn pri" onclick="xhdForm(-1)">+ Thêm xuất hoạt động</button><button class="btn gr" onclick="exportXLSX('tblXHD','Xuat hoat dong')">⬇ Excel</button></div>
+     <div class="sp"></div><button class="btn pri" onclick="xhdForm(-1)">+ Thêm xuất hoạt động</button><button class="btn gr" onclick="exportXLSX('tblXHD','Xuat hoat dong')">⬇ Excel 匯出</button></div>
    <div class="card scroll"><table id="tblXHD"><tr><th>Ngày</th><th>Loại</th><th>Chương trình</th><th>Kênh</th><th>SKU</th><th>Tên SP</th><th>ĐVT</th><th class="r">SL</th><th>Người lãnh</th><th></th></tr>${body}</table></div>
    <div class="note">Xuất kho phục vụ hoạt động/sự kiện. Số liệu đã đẩy vào cột <b>"Hoạt động"</b> của Theo dõi tồn.</div>`;
 }
@@ -7625,9 +7627,9 @@ function rQuaTangXuat(){
     <select id="qtCt" onchange="qtApply()">${opt(cts,qtF.ct,'Chương trình: tất cả')}</select>
     <input id="qtFind" placeholder="Tìm SKU / tên quà" value="${qtF.find}" oninput="qtApply()" style="flex:1;min-width:150px">
   </div>
-  <div class="bar"><b>Tổng quà cần chuẩn bị</b><div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblQTagg','Tong qua')">⬇ Excel</button></div>
+  <div class="bar"><b>Tổng quà cần chuẩn bị</b><div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblQTagg','Tong qua')">⬇ Excel 匯出</button></div>
   <div class="card scroll"><table id="tblQTagg"><tr><th>SKU quà</th><th>Tên</th><th class="r">Tổng SL</th><th class="r">Số đơn</th></tr>${aggBody}</table></div>
-  <div class="bar" style="margin-top:12px"><b>Chi tiết theo đơn</b><div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblQTdet','Chi tiet qua')">⬇ Excel</button></div>
+  <div class="bar" style="margin-top:12px"><b>Chi tiết theo đơn</b><div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblQTdet','Chi tiet qua')">⬇ Excel 匯出</button></div>
   <div class="card scroll"><table id="tblQTdet"><tr><th>Ngày</th><th>Mã đơn</th><th>Kênh</th><th>Chương trình</th><th>SKU quà</th><th>Tên</th><th class="r">SL</th><th>Nguồn</th><th>Đợt</th></tr>${detBody}</table></div>`;
 }
 function ensureHoan(){if(!DATA.hoan)DATA.hoan={};}
@@ -7650,7 +7652,7 @@ function rHoanHuy(){ ensureHoan(); ensureSonLe(); if(!el('hoanBody'))return;
   var stepOpts=[['','Quy trình 流程: tất cả'],['none','— không cần / chưa chọn'],['cho','① Chờ về kho'],['kiem','② Đang kiểm tra'],['nhaplai','③ Nhập lại kho'],['sonle','③ → Kho sơn lẻ'],['loaibo','③ Loại bỏ']];
   var sttOpts=[['','Thao tác 操作: tất cả'],['chua','Chưa xử lý'],['dang','Đang xử lý'],['xong','Đã xong']];
   function sel2(id,opts,cur){return `<select id="${id}" onchange="hhApply()" style="font-weight:600">`+opts.map(o=>`<option value="${o[0]}" ${cur===o[0]?'selected':''}>${o[1]}</option>`).join('')+`</select>`;}
-  var bar=`<div class="bar" style="margin-top:8px">${sel2('hhSit',sitOpts,hhF.sit)}${sel2('hhStep',stepOpts,hhF.step)}${sel2('hhStt',sttOpts,hhF.stt)}<div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblHoan','Hoan huy')">⬇ Excel</button></div>`;
+  var bar=`<div class="bar" style="margin-top:8px">${sel2('hhSit',sitOpts,hhF.sit)}${sel2('hhStep',stepOpts,hhF.step)}${sel2('hhStt',sttOpts,hhF.stt)}<div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblHoan','Hoan huy')">⬇ Excel 匯出</button></div>`;
   var manual=`<div class="bar" style="margin-top:8px;background:#eef4fb;border:1px solid var(--line);border-radius:10px;padding:8px 12px"><b class="sub">Đánh dấu HOÀN thủ công (đơn đã giao, khách trả):</b><input id="hhMa" placeholder="Mã đơn (đã xuất)" style="width:200px"><button class="btn pri" onclick="hhAdd()">+ Thêm đơn hoàn</button></div>`;
   var H='';
   rows.forEach(g=>{
@@ -7761,7 +7763,7 @@ function rSonLe(){ ensureSonLe(); if(!el('slBody'))return;
   var aks=Object.keys(agg).sort();var sum='';
   aks.forEach(k=>{var a=agg[k];sum+=`<tr><td class="mono">${a.base}</td><td><b style="color:#9a6a00">${a.mau||''}</b></td><td class="r">${a.sl}</td></tr>`;});
   if(!aks.length)sum=`<tr><td colspan="3" class="sub" style="text-align:center;padding:10px">Không có ${dvt} nào đang tồn.</td></tr>`;
-  el('slBody').innerHTML=sub+`<div class="bar" style="margin-top:8px"><b class="sub">Mỗi ${dvt} sơn đã pha màu hoàn về = 1 dòng. Theo dõi để tận dụng giao cho khách mua đúng màu sau.</b><div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblSonLe','Kho son le ${slSub}')">⬇ Excel</button></div>
+  el('slBody').innerHTML=sub+`<div class="bar" style="margin-top:8px"><b class="sub">Mỗi ${dvt} sơn đã pha màu hoàn về = 1 dòng. Theo dõi để tận dụng giao cho khách mua đúng màu sau.</b><div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblSonLe','Kho son le ${slSub}')">⬇ Excel 匯出</button></div>
    <div class="card scroll">${h}</div>
    <div class="bar" style="margin-top:12px"><b>Tổng hợp ${dvt} đang tồn theo màu / 現有調色餘漆</b></div>
    <div class="card" style="max-width:520px"><table id="tblSonLeSum" style="width:100%"><tr><th>Base SKU</th><th>Màu</th><th class="r">SL đang tồn (${dvt})</th></tr>${sum}</table></div>
@@ -7795,12 +7797,12 @@ function rXKBanHang(){
     ${xkBHSub==='keo'?`<label class="sub" style="display:inline-flex;align-items:center;gap:5px"><input type="checkbox" ${xkHideDone?'checked':''} onchange="xkHideDone=this.checked;xkDraw()"> Ẩn đơn đã xuất 隱藏已出貨</label><span class="sub" id="xkSelN" style="margin-left:10px;font-weight:600"></span>`:''}
     <div class="sp"></div>
     ${xkBHSub==='keo'
-      ? `<button class="btn pri" onclick="keoDonHaravan()">⟳ Kéo đơn từ Haravan</button><button class="btn pri" onclick="xkConfirmSel()">✓ Xuất kho</button><button class="btn" onclick="xkClearSel()">✗ Bỏ chọn</button><button class="btn gr" onclick="exportXLSX('tblXKkeo','Keo don')">⬇ Excel</button>`
-      : `<button class="btn ${xkChiet?'pri':''}" onclick="xkChiet=!xkChiet;xkDraw()">🎨 Bảng chiết màu</button><button class="btn" onclick="inPhieu()">🖨 In phiếu xuất kho</button><button class="btn" onclick="inBanGiao()">🚚 In bàn giao VC</button><button class="btn gr" onclick="exportXLSX(xkChiet?'tblChiet':'tblXKxuat','Xuat ban hang')">⬇ Excel</button>`}
+      ? `<button class="btn pri" onclick="keoDonHaravan()">⟳ Kéo đơn từ Haravan 拉單</button><button class="btn pri" onclick="xkConfirmSel()">✓ Xuất kho 出貨</button><button class="btn" onclick="xkClearSel()">✗ Bỏ chọn 取消選擇</button><button class="btn gr" onclick="exportXLSX('tblXKkeo','Keo don')">⬇ Excel 匯出</button>`
+      : `<button class="btn ${xkChiet?'pri':''}" onclick="xkChiet=!xkChiet;xkDraw()">🎨 Bảng chiết màu 調色表</button><button class="btn" onclick="inPhieu()">🖨 In phiếu xuất kho 列印出貨單</button><button class="btn" onclick="inBanGiao()">🚚 In bàn giao VC 交接單</button><button class="btn gr" onclick="exportXLSX(xkChiet?'tblChiet':'tblXKxuat','Xuat ban hang')">⬇ Excel 匯出</button>`}
   </div>
   <div id="xkCount" class="sub" style="margin:0 0 8px;font-weight:500"></div>
   <div class="card scroll" id="xkTbl"></div>
-  ${xkBHSub==='keo'?'<div class="note"><b>Mỗi mã đơn = 1 dòng.</b> Đơn nhiều SKU bấm <b>▸ N SKU</b> để bung chi tiết (hiện tên hạng mục, SKU nhỏ phía dưới). Tick chọn cả đơn; nút <b>Bỏ chọn</b> xoá nhanh. Chỉ đơn "Đã có ĐVVC" mới xuất kho được.':'<div class="note">SKU sàn đã đổi sang <b>SKU hệ thống</b> theo tab ② Đồng bộ SKU; sơn nổ màu để chiết; combo nổ thành phần; quà tặng tự áp theo chương trình đang kích hoạt. Bấm <b>🎨 Bảng chiết màu</b> để gom theo loại + màu. <b>In gộp đợt:</b> tick đợt rồi bấm In.'}</div>`;
+  ${xkBHSub==='keo'?'<div class="note"><b>Mỗi mã đơn = 1 dòng.</b> Đơn nhiều SKU bấm <b>▸ N SKU</b> để bung chi tiết (hiện tên hạng mục, SKU nhỏ phía dưới). Tick chọn cả đơn; nút <b>Bỏ chọn</b> xoá nhanh. Chỉ đơn "Đã có ĐVVC" mới xuất kho được.':'<div class="note">SKU sàn đã đổi sang <b>SKU hệ thống</b> theo tab ② Đồng bộ SKU; sơn nổ màu để chiết; combo nổ thành phần; quà tặng tự áp theo chương trình đang kích hoạt. Bấm <b>🎨 Bảng chiết màu 調色表</b> để gom theo loại + màu. <b>In gộp đợt:</b> tick đợt rồi bấm In.'}</div>`;
   xkDraw();
 }
 function fmtDM(d){var p=(d||'').split(' ')[0].split('-');return p.length>=3?(p[2]+'/'+p[1]):d;}
@@ -7905,7 +7907,7 @@ function chietTable(){
   var TYPES=[['son1kg','Lon sơn 1kg'],['mini','Hũ sơn mini (L-MZ)']];
   var sel=`<div class="bar" style="margin:4px 0 8px"><span class="sub">Loại cần chiết:</span>`+
     TYPES.map(t=>`<button class="btn ${xkChietType===t[0]?'pri':''}" onclick="xkChietType='${t[0]}';xkDraw()">${t[1]}</button>`).join('')+
-    `<div class="sp"></div><button class="btn" onclick="inChiet()">🖨 In danh sách chiết</button></div>`;
+    `<div class="sp"></div><button class="btn" onclick="inChiet()">🖨 In danh sách chiết 列印調色清單</button></div>`;
   var rows=xkFilter().filter(({o})=>{o._he=skuHe(o);return o.tt==='Da xuat'&&dotPass(o)&&o._he.sonType===xkChietType;});
   var agg={};
   rows.forEach(({o})=>{var he=o._he;var key=he.code+'||'+(o.mau||'(không màu)');if(!agg[key])agg[key]={sys:he.code,name:he.name,mau:o.mau||'(không màu)',sl:0,don:0};agg[key].sl+=(+o.sl||0);agg[key].don++;});
@@ -8010,7 +8012,7 @@ function rSync(){
   hChua+=`</table>`;
   el('syncBody').innerHTML=`
   <div class="note">Điền trực tiếp vào bảng: <b>SKU sàn → SKU hệ thống LOHO + Kênh</b>. Kéo đơn giữ SKU Haravan; sang ④ Xuất kho tự đổi sang SKU hệ thống (khớp Danh mục + Tồn kho). Ô <b>SKU hệ thống</b> gõ tên là gợi ý ra mã. Dùng <b>*</b> nếu 1 dòng phủ nhiều màu (vd <span class="mono">L-SM-*-01P</span>); không có * = khớp đúng 1 mã.</div>
-  <div class="bar"><b>Bảng quy tắc đồng bộ SKU</b><div class="sp"></div><button class="btn pri" onclick="addRule()">+ Thêm dòng</button><button class="btn gr" onclick="exportXLSX('tblRule','Dong bo SKU')">⬇ Excel</button></div>
+  <div class="bar"><b>Bảng quy tắc đồng bộ SKU</b><div class="sp"></div><button class="btn pri" onclick="addRule()">+ Thêm dòng</button><button class="btn gr" onclick="exportXLSX('tblRule','Dong bo SKU')">⬇ Excel 匯出</button></div>
   <div class="card scroll"><table id="tblRule"><tr><th>SKU sàn (mẫu, * = nhiều)</th><th>Kênh</th><th>→ SKU hệ thống</th><th>Tên hệ thống</th><th>Loại</th><th class="r">Số đơn khớp</th><th></th></tr>${body}</table></div>
   <div class="bar" style="margin-top:12px"><b>SKU sàn chưa khớp</b> <span class="sub">(${chua.length} mã — nên thêm vào bảng để vào tồn kho)</span></div>
   <div class="card scroll">${hChua}</div>${sysDatalist()}`;
@@ -8062,7 +8064,7 @@ function rGift(){
   var kenhs=['Tất cả'].concat(GKENHS);
   var rows=DATA.gifts.map((g,i)=>({g,i})).filter(x=>giftKenh==='Tất cả'||(x.g.tiers||[]).some(t=>(t.kenhs||[]).includes(giftKenh)));
   var h=`<table id="tblGift"><tr><th style="width:22px"></th><th>Chương trình</th><th>Thời gian</th><th class="r">Số bậc</th><th>Kênh (gộp)</th><th>Trạng thái</th><th></th></tr>`;
-  if(!rows.length)h+=`<tr><td colspan="7" class="sub">Chưa có chương trình. Bấm "+ Thêm chương trình".</td></tr>`;
+  if(!rows.length)h+=`<tr><td colspan="7" class="sub">Chưa có chương trình. Bấm "+ Thêm chương trình 新增活動".</td></tr>`;
   rows.forEach(({g,i})=>{var on=g.tt==='Đang chạy';var open=giftExpand[i];
     var allK=uniq([].concat.apply([],(g.tiers||[]).map(t=>t.kenhs||[])));
     h+=`<tr><td><button class="btn" style="padding:0 6px" onclick="giftExpand[${i}]=!giftExpand[${i}];rGift()">${open?'▾':'▸'}</button></td>
@@ -8079,7 +8081,7 @@ function rGift(){
   el('giftBody').innerHTML=`
   <div class="note" style="background:#eef6ff;border-color:#b9d4f0"><b>Khi nào cần lập chương trình?</b> Chỉ cần cho quà <b>Tự áp</b> (quà KHÔNG có sẵn trong đơn → hệ thống tự thêm theo bậc giá). Quà <b>Giá 0đ từ sàn</b> (Shopee/TikTok đã gắn sẵn) thì <b>không cần lập gì</b> — kéo đơn về là dòng 0đ tự thành Quà, hiện luôn ở ④.</div>
   <div class="tabs2" style="margin-top:8px">${kenhs.map(k=>`<button class="${giftKenh===k?'on':''}" onclick="giftKenh='${k}';rGift()">${k}</button>`).join('')}</div>
-  <div class="bar"><button class="btn pri" onclick="giftAdd()">+ Thêm chương trình</button><div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblGift','Qua tang')">⬇ Excel</button></div>
+  <div class="bar"><button class="btn pri" onclick="giftAdd()">+ Thêm chương trình 新增活動</button><div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblGift','Qua tang')">⬇ Excel 匯出</button></div>
   <div class="card scroll">${h}</div>
   <div class="note"><b>Cấu trúc:</b> Chương trình = Tên + Từ/Đến ngày. Mỗi <b>bậc giá</b> có riêng: khoảng giá <b>từ–đến</b>, <b>Nguồn</b> (Tự áp / Giá 0 từ sàn) và <b>Kênh</b> áp dụng.<br>
   <b>Khoảng giá:</b> áp khi <b>Từ ≤ tiền khách trả &lt; Đến</b> (Đến KHÔNG bao gồm). VD bậc 199.000–399.000 = từ 199k đến dưới 399k; muốn "399k trở lên" thì bậc sau đặt Từ=399.000, Đến=∞.<br>
@@ -8166,12 +8168,12 @@ let qtKenh='Shopee';
 function rQuatang(){
   el('p-quatang').innerHTML=H('Chương trình quà tặng','贈品活動')+`
   <div class="tabs2">${['Shopee','TikTok','Lazada','Website'].map(k=>`<button class="${qtKenh===k?'on':''}" onclick="qtKenh='${k}';rQuatang()">${k}</button>`).join('')}</div>
-  <div class="bar"><button class="btn pri">+ Thêm chương trình</button><div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblQt','Qua tang')">⬇ Xuất Excel</button></div>
+  <div class="bar"><button class="btn pri">+ Thêm chương trình 新增活動</button><div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblQt','Qua tang')">⬇ Xuất Excel 匯出</button></div>
   <div class="card scroll"><table id="tblQt"></table></div>
   <div class="note">Bậc giá trị bạn tự tạo thoải mái. Quà giá 0 từ sàn HOẶC tự áp đều dồn về "Xuất kho quà tặng".</div>`;
   var rows=DATA.gifts.filter(g=>g.kenh===qtKenh);
   var h=`<tr><th>Chương trình<span class="zh">活動</span></th><th>Thời gian</th><th class="r">Bậc từ</th><th class="r">Bậc đến</th><th>Quà (SKU)<span class="zh">贈品</span></th><th class="r">SL</th><th>Nguồn</th><th>Trạng thái</th></tr>`;
-  if(!rows.length)h+=`<tr><td colspan="8" class="sub">Kênh ${qtKenh}: chưa có chương trình. Bấm "+ Thêm chương trình".</td></tr>`;
+  if(!rows.length)h+=`<tr><td colspan="8" class="sub">Kênh ${qtKenh}: chưa có chương trình. Bấm "+ Thêm chương trình 新增活動".</td></tr>`;
   rows.forEach(g=>{h+=`<tr><td>${g.ten}</td><td>${g.tu}–${g.den}</td><td class="r">${g.bacTu}</td><td class="r">${g.bacDen}</td><td class="mono">${g.sku} ×${g.sl}</td><td class="r">${g.sl}</td><td><span class="tag ${g.nguon==='Tự áp'?'t-warn':'t-info'}">${g.nguon}</span></td><td><span class="tag t-ok">${g.tt}</span></td></tr>`;});
   el('tblQt').innerHTML=h;
 }
@@ -8192,15 +8194,15 @@ function rKKTuan(){ ensureWeek(); var M=computeTon();
   var fri=(new Date().getDay()===5);
   var banner=`<div class="note" style="margin-top:8px;${fri?'background:#fff3df;border-color:#e8c98a;color:#8a5a00;font-weight:600':''}">${fri?'⚠ Hôm nay <b>Thứ 6</b> — đến lịch kiểm kho NVL hàng tuần. ':''}Kiểm nhanh: gõ <b>số đếm thực tế</b> → <b>Ghi nhận</b> → hệ thống tự tạo phiếu điều chỉnh cộng/trừ thẳng vào tồn (KHÔNG đóng kỳ, không reset đầu kỳ).</div>`;
   var dl=`<datalist id="wkList">`+DATA.products.slice(0,3000).map(function(p){return `<option value="${p.code}">${(p.vi||'').replace(/"/g,'')}</option>`;}).join('')+`</datalist>`;
-  var bar=`<div class="bar" style="margin-top:8px"><input id="wkAdd" placeholder="Gõ SKU hoặc tên để thêm mã vào danh sách kiểm tuần" list="wkList" style="flex:1;min-width:240px"><button class="btn pri" onclick="wkAddFlag()">+ Thêm mã</button><span class="sub" style="margin:0 2px">hoặc</span><select id="wkCat" style="font-weight:600">${wkCatOpts}</select><button class="btn" onclick="wkAddCat()">+ Cả danh mục</button><button class="btn" onclick="wkRemoveCat()">− Bỏ danh mục</button><input id="wkNguoi" placeholder="Người kiểm" value="${(wkNguoi||'').replace(/"/g,'&quot;')}" onchange="wkNguoi=this.value" style="width:150px"></div>`;
+  var bar=`<div class="bar" style="margin-top:8px"><input id="wkAdd" placeholder="Gõ SKU hoặc tên để thêm mã vào danh sách kiểm tuần" list="wkList" style="flex:1;min-width:240px"><button class="btn pri" onclick="wkAddFlag()">+ Thêm mã 新增</button><span class="sub" style="margin:0 2px">hoặc</span><select id="wkCat" style="font-weight:600">${wkCatOpts}</select><button class="btn" onclick="wkAddCat()">+ Cả danh mục 整類</button><button class="btn" onclick="wkRemoveCat()">− Bỏ danh mục 移除類</button><input id="wkNguoi" placeholder="Người kiểm" value="${(wkNguoi||'').replace(/"/g,'&quot;')}" onchange="wkNguoi=this.value" style="width:150px"></div>`;
   var rows=codes.map(function(c){var lt=wkTon(M,c);
     return `<tr><td class="mono">${c}</td><td>${nm(c)||''}</td><td class="sub">${unit(c)}</td><td class="r">${num(lt)}</td><td class="r"><input type="number" id="wk_${c}" style="width:86px;text-align:right;padding:3px 5px" placeholder="đếm"></td><td><button class="btn pri" style="padding:2px 9px" onclick="wkConfirm('${c}',${lt})">Ghi nhận</button></td><td><button class="btn" style="padding:2px 7px;color:var(--red)" onclick="wkUnflag('${c}')">bỏ cờ</button></td></tr>`;}).join('');
   if(!codes.length)rows=`<tr><td colspan="7" class="sub" style="text-align:center;padding:14px">Chưa gắn cờ mã nào. Gõ SKU/tên ở trên rồi bấm "+ Thêm mã" (vd thùng giấy, vỏ thùng, vật tư).</td></tr>`;
   var hist=DATA.weekLog.slice(-40).reverse().map(function(x){return `<tr><td>${x.ngay}</td><td class="mono">${x.code}</td><td>${nm(x.code)||''}</td><td class="r">${num(x.lt)}</td><td class="r">${num(x.dem)}</td><td class="r" style="font-weight:600;color:${x.lech===0?'#1e8e4e':(x.lech>0?'#2563b0':'#c0392b')}">${x.lech>0?'+':''}${x.lech}</td><td>${x.nguoi||''}</td></tr>`;}).join('');
   el('kkBody').innerHTML=banner+dl+bar+
-   `<div class="bar" style="margin-top:6px"><b>Danh sách kiểm tuần (${codes.length} mã)</b><div class="sp"></div><button class="btn" style="color:var(--red)" onclick="wkClearAll()">🗑 Xóa hết danh sách</button><button class="btn" onclick="wkConfirmAll()">✓ Ghi nhận tất cả</button><button class="btn gr" onclick="exportXLSX('tblWk','Kiem tuan')">⬇ Excel</button></div>
+   `<div class="bar" style="margin-top:6px"><b>Danh sách kiểm tuần (${codes.length} mã)</b><div class="sp"></div><button class="btn" style="color:var(--red)" onclick="wkClearAll()">🗑 Xóa hết 清空 danh sách</button><button class="btn" onclick="wkConfirmAll()">✓ Ghi nhận tất cả 全部記錄</button><button class="btn gr" onclick="exportXLSX('tblWk','Kiem tuan')">⬇ Excel 匯出</button></div>
    <div class="card scroll"><table id="tblWk"><tr><th>SKU</th><th>Tên</th><th>ĐVT</th><th class="r">Tồn lý thuyết</th><th class="r">Đếm thực tế</th><th>Ghi nhận</th><th></th></tr>${rows}</table></div>
-   <div class="bar" style="margin-top:12px"><b>Lịch sử kiểm tuần gần đây</b><div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblWkLog','Lich su kiem tuan')">⬇ Excel</button></div>
+   <div class="bar" style="margin-top:12px"><b>Lịch sử kiểm tuần gần đây</b><div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblWkLog','Lich su kiem tuan')">⬇ Excel 匯出</button></div>
    <div class="card scroll"><table id="tblWkLog"><tr><th>Ngày</th><th>SKU</th><th>Tên</th><th class="r">Tồn LT</th><th class="r">Đếm</th><th class="r">Lệch</th><th>Người</th></tr>${hist||'<tr><td colspan="7" class="sub" style="text-align:center;padding:10px">Chưa có lần kiểm nào.</td></tr>'}</table></div>
    <div class="note"><b>Số "Đếm thực tế" = số tồn cuối cùng.</b> Thiếu so với sổ → hệ thống tự tạo phiếu <b>XUẤT</b> đúng phần chênh (vd sổ 500, đếm 300 → xuất 200); dư → tạo phiếu <b>NHẬP</b>. Tồn ở Theo dõi tồn tự khớp đúng số đếm. Phiếu nằm trong Xuất–Nhập SX (mục đích "Điều chỉnh kiểm tuần"). KHÔNG ảnh hưởng kỳ kiểm kho tháng.</div>`;
 }
@@ -8229,15 +8231,15 @@ function rKiemkho(){ ensureKK();
   var _wkBan=_fri?`<div class="note" style="background:#fff3df;border-color:#e8c98a;color:#8a5a00;font-weight:700;margin-top:10px">⚠ Hôm nay Thứ 6 — đến lịch KIỂM KHO NVL hàng tuần. Mở tab <b>⚡ Kiểm nhanh tuần</b> để đếm & điều chỉnh tồn.</div>`:'';
   el('p-kiemkho').innerHTML=H('Kiểm kho & đóng kỳ','盤點結算')+_wkBan+`
    <div class="tabs2" style="margin-top:12px">
-     <button class="${kkSub==='chot'?'on':''}" onclick="kkSub='chot';rKiemkho()">① Chốt kiểm kho</button>
-     <button class="${kkSub==='ban'?'on':''}" onclick="kkSub='ban';rKiemkho()">② Tạo bản kiểm kho</button>
-     <button class="${kkSub==='dong'?'on':''}" onclick="kkSub='dong';rKiemkho()">③ Đóng kỳ & chuyển kỳ</button>
-     <button class="${kkSub==='tuan'?'on':''}" onclick="kkSub='tuan';rKiemkho()">⚡ Kiểm nhanh tuần (NVL)</button>
+     <button class="${kkSub==='chot'?'on':''}" onclick="kkSub='chot';rKiemkho()">① Chốt kiểm kho 結算</button>
+     <button class="${kkSub==='ban'?'on':''}" onclick="kkSub='ban';rKiemkho()">② Tạo bản kiểm kho 盤點表</button>
+     <button class="${kkSub==='dong'?'on':''}" onclick="kkSub='dong';rKiemkho()">③ Đóng kỳ & chuyển kỳ 結轉</button>
+     <button class="${kkSub==='tuan'?'on':''}" onclick="kkSub='tuan';rKiemkho()">⚡ Kiểm nhanh tuần 週盤點 (NVL)</button>
    </div><div id="kkBody"></div>`;
   if(kkSub==='chot')rKKChot();else if(kkSub==='ban')rKKBan();else if(kkSub==='dong')rKKDong();else rKKTuan();
 }
 function rKKChot(){ ensureKK();var snapped=Object.keys(DATA.kk.snap).length>0;
-  var body=`<div class="bar"><label class="sub">Ngày chốt kho:</label><input type="date" id="kkDate" value="${DATA.kk.ngayChot||'2026-06-25'}"><button class="btn pri" onclick="kkChot()">📷 Chốt kiểm kho (snapshot tồn lý thuyết)</button>${snapped?'<span class="tag t-ok">Đã chốt: '+DATA.kk.ngayChot+'</span>':''}<div class="sp"></div>${snapped?`<button class="btn gr" onclick="exportXLSX('tblKKsnap','Chot kiem kho')">⬇ Excel</button>`:''}</div>`;
+  var body=`<div class="bar"><label class="sub">Ngày chốt kho:</label><input type="date" id="kkDate" value="${DATA.kk.ngayChot||'2026-06-25'}"><button class="btn pri" onclick="kkChot()">📷 Chốt kiểm kho (snapshot tồn lý thuyết)</button>${snapped?'<span class="tag t-ok">Đã chốt: '+DATA.kk.ngayChot+'</span>':''}<div class="sp"></div>${snapped?`<button class="btn gr" onclick="exportXLSX('tblKKsnap','Chot kiem kho')">⬇ Excel 匯出</button>`:''}</div>`;
   if(!snapped)body+=`<div class="note">Chọn <b>ngày chốt</b> rồi bấm <b>Chốt kiểm kho</b>: hệ thống chụp số tồn hiện tại làm <b>Tồn lý thuyết</b> cho bản kiểm kho. Bước này KHÔNG hiện tồn thực tế / chênh lệch (xử lý ở tab ②).</div>`;
   else{var rows=Object.keys(DATA.kk.snap).map(c=>`<tr><td class="mono">${c}</td><td>${nm(c)}</td><td>${(P(c)&&P(c).type==='NVL')?'Nguyên liệu':'Thành phẩm'}</td><td class="r">${num(DATA.kk.snap[c])}</td></tr>`).join('');
     body+=`<div class="card scroll"><table id="tblKKsnap"><tr><th>SKU</th><th>Tên SP</th><th>Phân loại</th><th class="r">Tồn lý thuyết</th></tr>${rows}</table></div><div class="note">Đã chốt tồn lý thuyết ngày <b>${DATA.kk.ngayChot}</b> (${Object.keys(DATA.kk.snap).length} mã). Sang tab ② để nhân viên kiểm kê.</div>`;}
@@ -8311,7 +8313,7 @@ function rKKBan(){ ensureKK();var am=amKK();
      <label class="sub" style="display:inline-flex;align-items:center;gap:4px"><input type="checkbox" id="kkfHide0" ${kkF.hide0?'checked':''} onchange="kkApplyF()"> Ẩn tồn 0</label>
      <label class="sub" style="display:inline-flex;align-items:center;gap:4px"><input type="checkbox" id="kkfShowHidden" ${kkF.showHidden?'checked':''} onchange="kkApplyF()"> Hiện mã đã ẩn</label>
    </div>
-   <div class="bar" style="margin-top:-4px"><button class="btn" onclick="kkHideSel()">🚫 Ẩn mã đã chọn</button>${nHidden?`<button class="btn" style="color:var(--brand)" onclick="kkUnhideAll()">↩ Hiện ${nHidden} mã đã ẩn</button>`:""}<div class="sp"></div><button class="btn" onclick="inKiemKho()">🖨 In bản kiểm</button><button class="btn gr" onclick="exportXLSX('tblKK','Ban kiem kho')">⬇ Excel</button><button class="btn pri" style="background:var(--green);border-color:var(--green)" onclick="kkXacNhan()">✓ Xác nhận số lượng cuối cùng</button></div>
+   <div class="bar" style="margin-top:-4px"><button class="btn" onclick="kkHideSel()">🚫 Ẩn mã đã chọn</button>${nHidden?`<button class="btn" style="color:var(--brand)" onclick="kkUnhideAll()">↩ Hiện ${nHidden} mã đã ẩn</button>`:""}<div class="sp"></div><button class="btn" onclick="inKiemKho()">🖨 In bản kiểm</button><button class="btn gr" onclick="exportXLSX('tblKK','Ban kiem kho')">⬇ Excel 匯出</button><button class="btn pri" style="background:var(--green);border-color:var(--green)" onclick="kkXacNhan()">✓ Xác nhận số lượng cuối cùng</button></div>
    ${lenhBanner}
    <div class="card scroll"><table id="tblKK">${h}</table></div>
    <div class="note">① Tick mã → nhập NV1/NV2/NV3 ở trên → <b>Gán</b>. ② KK1/KK2: <b>Chênh lệch</b>=KK1−KK2; Khớp (khỏi KK3) / Lệch (bắt buộc KK3). ③ Cột <b>✔</b> đánh dấu dòng đã hoàn tất; bấm <b>✓ Xác nhận số lượng cuối cùng</b> để chốt cả lô + cấp lệnh. ④ Lọc theo <b>Trạng thái</b>; <b>Ẩn mã đã chọn</b> để loại khỏi bản kiểm (bật "Hiện mã đã ẩn" để xem lại).</div>`;
@@ -8360,7 +8362,7 @@ function rKKDong(){ ensureKK();var am=amKK();
      <div class="kpi"><div class="l">Mã đã xác nhận ✓</div><div class="v">${done.length}</div></div>
      <div class="kpi"><div class="l">Lệnh kiểm kho</div><div class="v" style="font-size:16px">${DATA.kk.lenh||'(chưa)'}</div></div>
      <div class="kpi"><div class="l">Tổng lệch tồn</div><div class="v" style="color:${totDiff<0?'var(--red)':(totDiff>0?'var(--green)':'var(--ink)')}">${totDiff>0?'+':''}${num(totDiff)}</div></div></div>
-   <div class="bar"><b>Danh sách mã đã xác nhận — sẽ chuyển thành Tồn đầu kỳ</b><div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblDong','Dong ky')">⬇ Excel</button></div>
+   <div class="bar"><b>Danh sách mã đã xác nhận — sẽ chuyển thành Tồn đầu kỳ</b><div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblDong','Dong ky')">⬇ Excel 匯出</button></div>
    <div class="card scroll"><table id="tblDong"><tr><th>SKU</th><th>Tên SP</th><th>Danh mục</th><th>Người phụ trách</th><th class="r">Tồn lý thuyết</th><th class="r">Tồn thực tế</th><th class="r">Lệch</th></tr>${rows}</table></div>
    <div class="note">Chỉ những mã <b>đã xác nhận ✓</b> ở tab ② mới chuyển kỳ: <b>Tồn thực tế</b> → <b>Tồn đầu kỳ</b> kỳ sau; xuất/nhập trước ngày chốt thuộc kỳ cũ (khoá). Cũng là số đầu kỳ cho hệ thống tính giá.</div>
    <div class="bar"><div class="sp"></div><button class="btn pri" style="background:var(--green);border-color:var(--green)" ${done.length?'':'disabled'} onclick="kkDong()">🔒 Chốt kỳ & chuyển ${done.length} mã sang đầu kỳ</button></div>`;
@@ -8393,7 +8395,7 @@ function rInphieu(){
     <div class="card" style="padding:0">
       <div style="padding:11px 14px;border-bottom:1px solid var(--line)"><b>① Phiếu xuất theo SKU / 出貨清單</b><div class="sub">Gộp SKU đã xuất trong ngày</div></div>
       <table id="tblSlip"><tr><th>SKU</th><th>Tên</th><th class="r">Tổng SL</th></tr>${Object.keys(agg).map(k=>`<tr><td class="mono">${k}</td><td>${nm(k)}</td><td class="r">${num(agg[k])}</td></tr>`).join('')}</table>
-      <div style="padding:10px 14px"><button class="btn" onclick="window.print()">🖨 In</button> <button class="btn gr" onclick="exportXLSX('tblSlip','Phieu xuat SKU')">⬇ Excel</button></div>
+      <div style="padding:10px 14px"><button class="btn" onclick="window.print()">🖨 In</button> <button class="btn gr" onclick="exportXLSX('tblSlip','Phieu xuat SKU')">⬇ Excel 匯出</button></div>
     </div>
     <div class="card" style="padding:0">
       <div style="padding:11px 14px;border-bottom:1px solid var(--line)"><b>② Bàn giao vận chuyển / 交接單</b><div class="sub">Chia theo hãng, có mã vận đơn + ô ký nhận</div></div>
@@ -8438,8 +8440,8 @@ function rDashboard(){
     <div class="kpi"><div class="l">SP sắp hết</div><div class="v" style="color:var(--red)">${hetN}</div></div>
   </div>
   <div class="tabs2" style="margin-top:6px">
-    <button class="${dbSub==='ngay'?'on':''}" onclick="dbSub='ngay';rDashboard()">📅 Xuất theo ngày (lưới cả tháng)</button>
-    <button class="${dbSub==='thang'?'on':''}" onclick="dbSub='thang';rDashboard()">📆 Xuất theo tháng (so sánh)</button>
+    <button class="${dbSub==='ngay'?'on':''}" onclick="dbSub='ngay';rDashboard()">📅 Xuất theo ngày 按日 (lưới cả tháng)</button>
+    <button class="${dbSub==='thang'?'on':''}" onclick="dbSub='thang';rDashboard()">📆 Xuất theo tháng 按月 (so sánh)</button>
   </div><div id="dbBody"></div>`;
   if(dbSub==='ngay')dbNgay(EV); else dbThang(EV);
 }
@@ -8463,7 +8465,7 @@ function dbNgay(EV){
     body+=`<tr><td class="mono" style="position:sticky;left:0;background:#fff">${c}</td><td>${nm(c)||''}</td><td class="sub">${unit(c)}</td>${cells}<td class="r" style="font-weight:700;background:#fdf4f3;color:#b03a2e">${num(tot(c))}</td></tr>`;
   });
   if(!codes.length)body=`<tr><td colspan="${days.length+4}" class="sub" style="text-align:center;padding:14px">Tháng ${dbMon} chưa có ${dbType==='nvl'?'nguyên liệu':'thành phẩm'} nào xuất kho.</td></tr>`;
-  el('dbBody').innerHTML=dbTypeTabs()+`<div class="bar" style="margin-top:8px"><span class="sub">Tháng:</span><select onchange="dbMon=this.value;rDashboard()" style="font-weight:600">${monOpts}</select><input id="dbFindN" placeholder="Lọc theo SKU / tên" value="${(dbFind||'').replace(/"/g,'&quot;')}" oninput="dbFind=this.value;dbNgayRefresh()" style="flex:1;min-width:160px"><div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblDbN','Xuat theo ngay')">⬇ Excel</button></div>
+  el('dbBody').innerHTML=dbTypeTabs()+`<div class="bar" style="margin-top:8px"><span class="sub">Tháng:</span><select onchange="dbMon=this.value;rDashboard()" style="font-weight:600">${monOpts}</select><input id="dbFindN" placeholder="Lọc theo SKU / tên" value="${(dbFind||'').replace(/"/g,'&quot;')}" oninput="dbFind=this.value;dbNgayRefresh()" style="flex:1;min-width:160px"><div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblDbN','Xuat theo ngay')">⬇ Excel 匯出</button></div>
    <div class="card scroll" style="max-height:72vh"><table id="tblDbN" style="white-space:nowrap">${head}${body}</table></div>
    <div class="note">Mỗi cột 1→${lastDay} là <b>số lượng xuất theo từng ngày</b> trong tháng ${dbMon}. Chỉ hiện ${dbType==='nvl'?'nguyên liệu':'thành phẩm'} có phát sinh xuất. Cuộn ngang để xem hết ngày; lọc SKU để theo dõi 1 mã.</div>`;
 }
@@ -8486,7 +8488,7 @@ function dbThang(EV){
     body+=`<tr><td class="mono">${c}</td><td>${nm(c)||''}</td><td class="sub">${unit(c)}</td>${cells}<td class="r" style="font-weight:700;background:#eef3fb">${num(gtot(c))}</td><td class="r">${dbTrend(lm,pm)}</td></tr>`;
   });
   if(!codes.length)body=`<tr><td colspan="${months.length+5}" class="sub" style="text-align:center;padding:14px">Chưa có ${dbType==='nvl'?'nguyên liệu':'thành phẩm'} nào xuất kho.</td></tr>`;
-  el('dbBody').innerHTML=dbTypeTabs()+`<div class="bar" style="margin-top:8px"><input id="dbFindM" placeholder="Lọc theo SKU / tên" value="${(dbFind||'').replace(/"/g,'&quot;')}" oninput="dbFind=this.value;dbThangRefresh()" style="flex:1;min-width:180px"><span class="sub">${months.length} tháng có dữ liệu</span><div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblDbM','Xuat theo thang')">⬇ Excel</button></div>
+  el('dbBody').innerHTML=dbTypeTabs()+`<div class="bar" style="margin-top:8px"><input id="dbFindM" placeholder="Lọc theo SKU / tên" value="${(dbFind||'').replace(/"/g,'&quot;')}" oninput="dbFind=this.value;dbThangRefresh()" style="flex:1;min-width:180px"><span class="sub">${months.length} tháng có dữ liệu</span><div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblDbM','Xuat theo thang')">⬇ Excel 匯出</button></div>
    <div class="card scroll"><table id="tblDbM" style="white-space:nowrap">${head}${body}</table></div>
    <div class="note">Mỗi cột = tổng xuất kho của SKU trong 1 tháng. Cột <b>"So tháng trước"</b> so tháng gần nhất với tháng liền trước (▲ tăng / ▼ giảm). Chỉ hiện ${dbType==='nvl'?'nguyên liệu':'thành phẩm'} đã từng xuất.</div>`;
 }
