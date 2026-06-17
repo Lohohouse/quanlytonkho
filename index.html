@@ -7438,7 +7438,7 @@ function nxDel(i){if(!confirm('Xoá phiếu này?'))return;DATA.nx.splice(i,1);s
 
 /* ---- XUẤT KHO ---- */
 let xkSub='banhang', xkBHSub='keo', xkSel={}, xkDotSet={}, xkExpand={};
-let xkF={kenh:'',thang:'',ngay:'',dvvc:'',ttx:'',tthd:'',mau:'',find:''};
+let xkF={kenh:'',thang:'',ngay:'',tuNgay:'',denNgay:'',dvvc:'',ttx:'',tthd:'',mau:'',find:''};
 let xkHideDone=true, xkChiet=false, xkChietType='son1kg';
 var HARS={cho:['Chờ lấy hàng','t-warn'],giao:['Đã có ĐVVC','t-info'],huy:['Đã hủy','t-red']};
 function tenSan(o){return o.tenSan||nm(skuKho(o.skuFix||o.sku))||(o.skuFix||o.sku);}
@@ -7745,7 +7745,7 @@ function rXKBanHang(){
   <div class="bar">
     <select id="xkKenh" onchange="xkApply()"><option value="">Kênh: tất cả</option>${['Shopee','TikTok','Lazada','Website'].map(k=>`<option ${xkF.kenh===k?'selected':''}>${k}</option>`).join('')}</select>
     <select id="xkThang" onchange="xkApply()">${opt(months,xkF.thang,'Tháng: tất cả')}</select>
-    <input id="xkNgay" type="date" value="${xkF.ngay}" onchange="xkApply()" style="width:148px">
+    <span class="sub">Từ</span><input id="xkTu" type="date" value="${xkF.tuNgay}" onchange="xkApply()" title="Từ ngày" style="width:140px"><span class="sub">đến</span><input id="xkDen" type="date" value="${xkF.denNgay}" onchange="xkApply()" title="Đến ngày" style="width:140px">
     <select id="xkDvvc" onchange="xkApply()">${opt(carriers,xkF.dvvc,'ĐVVC: tất cả')}</select>
     <select id="xkTThd" onchange="xkApply()"><option value="">Đơn: tất cả</option><option value="cho" ${xkF.tthd==='cho'?'selected':''}>Chờ lấy hàng</option><option value="giao" ${xkF.tthd==='giao'?'selected':''}>Đã có ĐVVC</option><option value="huy" ${xkF.tthd==='huy'?'selected':''}>Đã hủy</option></select>
     ${xkBHSub==='keo'?`<select id="xkTTX" onchange="xkApply()"><option value="">Xuất: tất cả</option><option value="Chua xuat" ${xkF.ttx==='Chua xuat'?'selected':''}>Chưa xuất</option><option value="Da xuat" ${xkF.ttx==='Da xuat'?'selected':''}>Đã xuất</option></select>`:''}
@@ -7772,7 +7772,7 @@ function dotChips(){
 }
 function toggleDot(d){xkDotSet[d]=!xkDotSet[d];if(!xkDotSet[d])delete xkDotSet[d];rXKBanHang();}
 function dotPass(o){var keys=Object.keys(xkDotSet);return keys.length===0||xkDotSet[o.dot];}
-function xkApply(){xkF.kenh=v('xkKenh');xkF.thang=v('xkThang');xkF.ngay=v('xkNgay');xkF.dvvc=v('xkDvvc');xkF.tthd=v('xkTThd');xkF.ttx=v('xkTTX');xkF.mau=v('xkMau');xkF.find=v('xkFind');xkDraw();}
+function xkApply(){xkF.kenh=v('xkKenh');xkF.thang=v('xkThang');xkF.tuNgay=v('xkTu');xkF.denNgay=v('xkDen');xkF.dvvc=v('xkDvvc');xkF.tthd=v('xkTThd');xkF.ttx=v('xkTTX');xkF.mau=v('xkMau');xkF.find=v('xkFind');xkDraw();}
 function v(id){var e=el(id);return e?e.value:'';}
 function xkDraw(){
   if(xkBHSub==='keo'){ el('xkTbl').innerHTML=tblKeo(); xkSyncAllCb(); }
@@ -7799,7 +7799,7 @@ function xkSyncAllCb(){
 function xkFilter(){
   var q=(xkF.find||'').toLowerCase();var nd=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');
   return DATA.orders.map((o,i)=>({o,i})).filter(({o})=>
-    (!xkF.kenh||o.kenh===xkF.kenh)&&(!xkF.thang||o.ngay.slice(0,7)===xkF.thang)&&(!xkF.ngay||o.ngay===xkF.ngay)&&
+    (!xkF.kenh||o.kenh===xkF.kenh)&&(!xkF.thang||o.ngay.slice(0,7)===xkF.thang)&&(!xkF.tuNgay||o.ngay>=xkF.tuNgay)&&(!xkF.denNgay||o.ngay<=xkF.denNgay)&&
     (!xkF.dvvc||o.dvvc===xkF.dvvc)&&(!xkF.tthd||(o.tthd||'giao')===xkF.tthd)&&(!xkF.ttx||o.tt===xkF.ttx)&&(!xkF.mau||o.mau===xkF.mau)&&
     (!q||nd((o.madon+' '+o.sku+' '+tenSan(o)+' '+nm(skuKho(o.sku))).toLowerCase()).indexOf(nd(q))>=0));
 }
@@ -7985,8 +7985,10 @@ function ensureGifts(){ if(!DATA.gifts)DATA.gifts=[];
   });
 }
 // Tu ap: bac co nguon 'Tu ap' + dung kenh + tu <= tien < den (den ∞ = mo)
+function inGioWindow(o,g){ if(!g.gioTu||!g.gioDen)return true; var t=o.gio||''; if(!t)return true; if(g.gioTu<=g.gioDen)return t>=g.gioTu&&t<=g.gioDen; return t>=g.gioTu||t<=g.gioDen; }
 function giftFor(o){ ensureGifts(); var out=[];var t=+o.tien||0;
   DATA.gifts.forEach(g=>{ if(g.tt!=='Đang chạy')return;
+    if(g.tu&&o.ngay&&o.ngay<g.tu)return; if(g.den&&o.ngay&&o.ngay>g.den)return; if(!inGioWindow(o,g))return;
     (g.tiers||[]).forEach(tr=>{ if(tr.nguon!=='Tự áp')return; if(!(tr.kenhs||[]).includes(o.kenh))return;
       var lo=tienNum(tr.from),hi=tienNum(tr.to);
       if(t>=lo&&(hi===Infinity||t<hi))(tr.items||[]).forEach(it=>{if(it.sku)out.push({sku:it.sku,sl:it.sl||1,ten:g.ten,nguon:'Tự áp'});});
@@ -8008,7 +8010,7 @@ function rGift(){
     var allK=uniq([].concat.apply([],(g.tiers||[]).map(t=>t.kenhs||[])));
     h+=`<tr><td><button class="btn" style="padding:0 6px" onclick="giftExpand[${i}]=!giftExpand[${i}];rGift()">${open?'▾':'▸'}</button></td>
       <td><b style="cursor:pointer" onclick="giftExpand[${i}]=!giftExpand[${i}];rGift()">${g.ten}</b></td>
-      <td>${g.tu||'?'} – ${g.den||'?'}</td><td class="r">${(g.tiers||[]).length}</td>
+      <td>${g.tu||'?'} – ${g.den||'?'}${(g.gioTu&&g.gioDen)?'<br><span class="sub">⏰ '+g.gioTu+'–'+g.gioDen+'</span>':''}</td><td class="r">${(g.tiers||[]).length}</td>
       <td><span class="sub">${allK.join(', ')||'—'}</span></td><td>${gStateTag(g.tt)}</td>
       <td style="white-space:nowrap">${on?`<button class="btn" style="padding:1px 7px" onclick="giftState(${i},'Tạm dừng')">⏸ Tạm ngưng</button>`:`<button class="btn pri" style="padding:1px 8px" onclick="giftState(${i},'Đang chạy')">▶ Kích hoạt</button>`} <button class="btn" style="padding:1px 7px" title="Copy" onclick="giftCopy(${i})">📋</button> <button class="btn" style="padding:1px 7px" title="Sửa" onclick="giftEdit(${i})">✎</button> <button class="btn" style="padding:1px 7px;color:var(--red)" onclick="giftDel(${i})">🗑</button></td></tr>`;
     if(open){(g.tiers||[]).forEach((tr,ti)=>{
@@ -8029,12 +8031,13 @@ function rGift(){
 }
 function giftState(i,st){DATA.gifts[i].tt=st;save();rGift();}
 function giftDel(i){if(!confirm('Xóa chương trình này?'))return;DATA.gifts.splice(i,1);save();rGift();}
-function giftAdd(){giftDraft={idx:-1,ten:'',tu:'',den:'',tiers:[newTier()]};renderGiftForm();}
-function giftEdit(i){var g=DATA.gifts[i];giftDraft={idx:i,ten:g.ten,tu:g.tu,den:g.den,tiers:JSON.parse(JSON.stringify(g.tiers))};renderGiftForm();}
-function giftCopy(i){var g=DATA.gifts[i];giftDraft={idx:-1,ten:g.ten+' (copy)',tu:g.tu,den:g.den,tiers:JSON.parse(JSON.stringify(g.tiers))};renderGiftForm();}
+function giftAdd(){giftDraft={idx:-1,ten:'',tu:'',den:'',gioTu:'',gioDen:'',tiers:[newTier()]};renderGiftForm();}
+function giftEdit(i){var g=DATA.gifts[i];giftDraft={idx:i,ten:g.ten,tu:g.tu,den:g.den,gioTu:g.gioTu||'',gioDen:g.gioDen||'',tiers:JSON.parse(JSON.stringify(g.tiers))};renderGiftForm();}
+function giftCopy(i){var g=DATA.gifts[i];giftDraft={idx:-1,ten:g.ten+' (copy)',tu:g.tu,den:g.den,gioTu:g.gioTu||'',gioDen:g.gioDen||'',tiers:JSON.parse(JSON.stringify(g.tiers))};renderGiftForm();}
 function newTier(){return {from:0,to:'∞',nguon:'Tự áp',kenhs:['Shopee'],items:[{sku:'',sl:1}]};}
 function syncDraft(){ if(!giftDraft)return; var d=giftDraft;
   if(el('gfTen'))d.ten=el('gfTen').value; if(el('gfTu'))d.tu=el('gfTu').value; if(el('gfDen'))d.den=el('gfDen').value;
+  if(el('gfGioTu'))d.gioTu=el('gfGioTu').value; if(el('gfGioDen'))d.gioDen=el('gfGioDen').value;
   d.tiers.forEach((tr,ti)=>{ if(el('gfFrom'+ti))tr.from=tienNum(el('gfFrom'+ti).value); if(el('gfTo'+ti))tr.to=el('gfTo'+ti).value;
     tr.kenhs=GKENHS.filter((k,ki)=>{var c=el('gfK'+ti+'_'+ki);return c&&c.checked;});
     tr.items.forEach((it,j)=>{var a=el('gfSku'+ti+'_'+j),b=el('gfSl'+ti+'_'+j);if(a)it.sku=(a.value||'').split('—')[0].trim();if(b)it.sl=Number(b.value)||1;});
@@ -8061,11 +8064,16 @@ function renderGiftForm(){
       <label class="sub">Từ ngày<input id="gfTu" type="date"></label>
       <label class="sub">Đến ngày<input id="gfDen" type="date"></label>
     </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+      <label class="sub">Giờ bắt đầu (để trống = cả ngày)<input id="gfGioTu" type="time"></label>
+      <label class="sub">Giờ kết thúc<input id="gfGioDen" type="time"></label>
+    </div>
     <div style="margin-top:10px"><b>Các bậc giá & quà tặng:</b>${tiersH}<button class="btn pri" style="padding:2px 10px;margin-top:4px" onclick="addTier()">+ Thêm bậc giá</button></div>
    </div>
    <div class="bar" style="padding:12px 18px;border-top:1px solid var(--line)"><button class="btn pri" onclick="giftSave()">💾 Lưu (thành Nháp)</button><button class="btn" onclick="giftDraft=null;closeModal()">Hủy</button><span class="sub">Lưu xong bấm ▶ Kích hoạt mới áp vào xuất kho.</span></div>
    ${sysDatalist()}`);
   if(d.tu&&el('gfTu'))el('gfTu').value=d.tu; if(d.den&&el('gfDen'))el('gfDen').value=d.den;
+  if(d.gioTu&&el('gfGioTu'))el('gfGioTu').value=d.gioTu; if(d.gioDen&&el('gfGioDen'))el('gfGioDen').value=d.gioDen;
 }
 function addTier(){syncDraft();giftDraft.tiers.push(newTier());renderGiftForm();}
 function delTier(ti){syncDraft();giftDraft.tiers.splice(ti,1);if(!giftDraft.tiers.length)giftDraft.tiers.push(newTier());renderGiftForm();}
@@ -8075,7 +8083,7 @@ function giftSave(){
   syncDraft();var d=giftDraft;
   var tiers=d.tiers.map(tr=>({from:tienNum(tr.from),to:(tr.to==='∞'||tienNum(tr.to)===Infinity?'∞':tienNum(tr.to)),nguon:'Tự áp',kenhs:(tr.kenhs||[]).slice(),items:tr.items.filter(it=>it.sku)})).filter(tr=>tr.items.length&&tr.kenhs.length);
   if(!tiers.length){alert('Mỗi bậc cần ít nhất 1 quà và 1 kênh.');return;}
-  var g={ten:d.ten||'(chưa đặt tên)',tu:d.tu||'',den:d.den||'',tiers:tiers,tt:(d.idx>=0?DATA.gifts[d.idx].tt:'Nháp')};
+  var g={ten:d.ten||'(chưa đặt tên)',tu:d.tu||'',den:d.den||'',gioTu:d.gioTu||'',gioDen:d.gioDen||'',tiers:tiers,tt:(d.idx>=0?DATA.gifts[d.idx].tt:'Nháp')};
   if(d.idx>=0)DATA.gifts[d.idx]=g; else DATA.gifts.push(g);
   save();giftDraft=null;closeModal();rGift();
 }
