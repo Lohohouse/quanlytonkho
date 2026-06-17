@@ -6838,6 +6838,7 @@ function zh(code){var p=P(code);return p?p.zh:'';}
 function unit(code){var p=P(code);return p?p.unit:'';}
 function num(n){return (n==null||n==='')?'':Number(n).toLocaleString('vi-VN');}
 function explode(code,qty){var b=DATA.bom[code];if(b&&b.length){return b.map(c=>({code:c.code,qty:c.qty*qty,child:true}));}return [{code:code,qty:qty,child:false}];}
+function backfillGio(){ (DATA.orders||[]).forEach(function(o){ if(!o.gio && o.dot && (''+o.dot).indexOf(' ')>=0) o.gio=(''+o.dot).split(' ')[1]; }); }
 function normalizeCombos(){ (DATA.products||[]).forEach(function(p){ if(p.items&&p.items.length){ p.combo=true; p.type='Combo'; if(!DATA.bom)DATA.bom={}; if(!DATA.bom[p.code]||!DATA.bom[p.code].length)DATA.bom[p.code]=p.items.slice(); } }); }
 function el(id){return document.getElementById(id);}
 /* ============ ĐỒNG BỘ GOOGLE SHEETS (cloud backup + dùng chung) ============ */
@@ -7509,6 +7510,7 @@ function skuHe(o){ ensureSkumap(); var s=o.skuFix||o.sku; var k=o.kenh||'';
 function idxOf(madon){var a=[];DATA.orders.forEach((o,i)=>{if(o.madon===madon)a.push(i);});return a;}
 function stTag(t){return t==='Da xuat'?'<span class="tag t-ok">Đã xuất</span>':'<span class="tag t-warn">Chưa xuất</span>';}
 function harTag(s){var x=HARS[s||'giao']||HARS.giao;return '<span class="tag '+x[1]+'">'+x[0]+'</span>';}
+function ngayGio(o){return (o.ngay||'')+(o.gio?'<br><span class="sub" style="font-size:10px;color:#2563b0">🕒 '+o.gio+'</span>':'');}
 function dvvcTag(v){return v?'<span class="tag t-info" style="font-size:9.5px">'+v+'</span>':'<span class="sub">—</span>';}
 function tienFmt(n){n=Number(n)||0;return n?n.toLocaleString('vi-VN')+'đ':'';}
 function dotNow(){var n=new Date();var p=function(x){return ('0'+x).slice(-2);};return n.getFullYear()+'-'+p(n.getMonth()+1)+'-'+p(n.getDate())+' '+p(n.getHours())+':'+p(n.getMinutes());}
@@ -7867,7 +7869,7 @@ function tblKeo(){
     h+=`<tr ${huy?'style="opacity:.5"':(!ready?'style="opacity:.82"':'')}>`+
       `<td>${(!ready||done)?'<span class="sub">'+(done?'✓':'—')+'</span>':`<input type="checkbox" ${xkSel[g.madon]?'checked':''} onchange="xkPick('${g.madon}',this.checked)">`}</td>`+
       `<td><button class="btn" style="padding:0 6px;line-height:18px" onclick="xkToggle('${g.madon}')">${open?'▾':'▸'}</button></td>`+
-      `<td>${o.ngay}</td><td class="mono">${g.madon}</td><td>${dvvcTag(o.dvvc)}</td><td>${o.kenh}</td><td class="mono">${o.vd||'—'}</td>`+
+      `<td>${ngayGio(o)}</td><td class="mono">${g.madon}</td><td>${dvvcTag(o.dvvc)}</td><td>${o.kenh}</td><td class="mono">${o.vd||'—'}</td>`+
       `<td style="cursor:pointer" onclick="xkToggle('${g.madon}')">${spCell}</td><td>${mauCell}</td><td class="r">${tienFmt(o.tien)}</td><td class="r">${slT}</td><td>${quaAny?'<span class="tag t-info">Quà</span>':''}</td>`+
       `<td>${harTag(o.tthd)}</td><td>${stTag(o.tt)}</td>`+
       `<td>${(!ready||done)?'':`<button class="btn pri" style="padding:3px 9px" onclick="xkConfirm('${g.madon}')">Xuất kho</button>`}</td></tr>`;
@@ -7890,18 +7892,18 @@ function tblXuat(){
     var huyFlag=(o.tthd==='huy'&&first)?` <span class="tag t-red">⚠ HỦY sau xuất</span> <button class="btn pri" style="padding:1px 8px;font-size:11px;vertical-align:middle" onclick="hhThuHoi('${o.madon}')">↩ Thu hồi ngay</button>`:'';
     var he=skuHe(o);
     if(he.isBase){
-      h+=`<tr ${o.tthd==='huy'?'style="background:#fff0f0"':''}><td class="mono">${ma}</td><td>${o.ngay}</td><td class="mono">${o.madon}</td><td>${dvvcTag(o.dvvc)}</td><td>${o.kenh}</td><td class="mono">${o.vd||'—'}</td><td class="mono">${he.code}</td><td>${he.name} <span class="tag t-warn" style="font-size:9px">chiết màu</span>${huyFlag}</td><td><b style="color:#9a6a00">${o.mau||''}</b></td><td class="r">${tienCell}</td><td class="r">${o.sl}</td><td>${o.qua?'Quà':''}</td><td class="sub">${dotLabel(o)}</td></tr>`;
+      h+=`<tr ${o.tthd==='huy'?'style="background:#fff0f0"':''}><td class="mono">${ma}</td><td>${ngayGio(o)}</td><td class="mono">${o.madon}</td><td>${dvvcTag(o.dvvc)}</td><td>${o.kenh}</td><td class="mono">${o.vd||'—'}</td><td class="mono">${he.code}</td><td>${he.name} <span class="tag t-warn" style="font-size:9px">chiết màu</span>${huyFlag}</td><td><b style="color:#9a6a00">${o.mau||''}</b></td><td class="r">${tienCell}</td><td class="r">${o.sl}</td><td>${o.qua?'Quà':''}</td><td class="sub">${dotLabel(o)}</td></tr>`;
       giftRows.forEach(gr=>{h+=giftRowHtml(gr,ma,o);});return;
     }
     var k=he.code;var lines=explode(k,o.sl);var isC=lines.length>1||lines[0].child;
-    if(isC){h+=`<tr style="background:#fafbfd"><td class="mono">${ma}</td><td>${o.ngay}</td><td class="mono">${o.madon}</td><td>${dvvcTag(o.dvvc)}</td><td>${o.kenh}</td><td class="mono">${o.vd||'—'}</td><td class="mono">${k}</td><td>${nm(k)} <span class="tag t-info">nổ ${lines.length} SP</span></td><td></td><td class="r">${tienCell}</td><td class="r">${o.sl}</td><td>${o.qua?'Quà':''}</td><td class="sub">${dotLabel(o)}</td></tr>`;
+    if(isC){h+=`<tr style="background:#fafbfd"><td class="mono">${ma}</td><td>${ngayGio(o)}</td><td class="mono">${o.madon}</td><td>${dvvcTag(o.dvvc)}</td><td>${o.kenh}</td><td class="mono">${o.vd||'—'}</td><td class="mono">${k}</td><td>${nm(k)} <span class="tag t-info">nổ ${lines.length} SP</span></td><td></td><td class="r">${tienCell}</td><td class="r">${o.sl}</td><td>${o.qua?'Quà':''}</td><td class="sub">${dotLabel(o)}</td></tr>`;
       lines.forEach(c=>h+=`<tr class="child"><td></td><td></td><td></td><td></td><td></td><td></td><td class="mono">↳ ${c.code}</td><td>${nm(c.code)}</td><td></td><td></td><td class="r">${c.qty}</td><td></td><td></td></tr>`);
       giftRows.forEach(gr=>{h+=giftRowHtml(gr,ma,o);});
-    } else {h+=`<tr ${o.tthd==='huy'?'style="background:#fff0f0"':''}><td class="mono">${ma}</td><td>${o.ngay}</td><td class="mono">${o.madon}</td><td>${dvvcTag(o.dvvc)}</td><td>${o.kenh}</td><td class="mono">${o.vd||'—'}</td><td class="mono">${k}</td><td>${nm(k)}${huyFlag}</td><td><b style="color:#9a6a00">${o.mau||''}</b></td><td class="r">${tienCell}</td><td class="r">${o.sl}</td><td>${o.qua?'Quà':''}</td><td class="sub">${dotLabel(o)}</td></tr>`;giftRows.forEach(gr=>{h+=giftRowHtml(gr,ma,o);});}
+    } else {h+=`<tr ${o.tthd==='huy'?'style="background:#fff0f0"':''}><td class="mono">${ma}</td><td>${ngayGio(o)}</td><td class="mono">${o.madon}</td><td>${dvvcTag(o.dvvc)}</td><td>${o.kenh}</td><td class="mono">${o.vd||'—'}</td><td class="mono">${k}</td><td>${nm(k)}${huyFlag}</td><td><b style="color:#9a6a00">${o.mau||''}</b></td><td class="r">${tienCell}</td><td class="r">${o.sl}</td><td>${o.qua?'Quà':''}</td><td class="sub">${dotLabel(o)}</td></tr>`;giftRows.forEach(gr=>{h+=giftRowHtml(gr,ma,o);});}
   });
   return h+'</table>';
 }
-function giftRowHtml(gr,ma,o){return `<tr style="background:#fffaf0"><td class="mono">${ma}</td><td>${o.ngay}</td><td class="mono">${o.madon}</td><td>${dvvcTag(o.dvvc)}</td><td>${o.kenh}</td><td class="mono">${o.vd||'—'}</td><td class="mono">${gr.sku}</td><td>🎁 ${nm(gr.sku)||gr.ten}</td><td></td><td class="r"></td><td class="r">${gr.sl}</td><td style="white-space:nowrap">Quà <span title="Hệ thống tự áp" style="font-size:10px;color:#c77">⚙</span> <button class="btn" style="padding:0 5px;color:var(--red)" title="Xóa quà tự áp này" onclick="delGiftFromOrder('${o.madon}','${gr.sku}')">🗑</button></td><td class="sub">${dotLabel(o)}</td></tr>`;}
+function giftRowHtml(gr,ma,o){return `<tr style="background:#fffaf0"><td class="mono">${ma}</td><td>${ngayGio(o)}</td><td class="mono">${o.madon}</td><td>${dvvcTag(o.dvvc)}</td><td>${o.kenh}</td><td class="mono">${o.vd||'—'}</td><td class="mono">${gr.sku}</td><td>🎁 ${nm(gr.sku)||gr.ten}</td><td></td><td class="r"></td><td class="r">${gr.sl}</td><td style="white-space:nowrap">Quà <span title="Hệ thống tự áp" style="font-size:10px;color:#c77">⚙</span> <button class="btn" style="padding:0 5px;color:var(--red)" title="Xóa quà tự áp này" onclick="delGiftFromOrder('${o.madon}','${gr.sku}')">🗑</button></td><td class="sub">${dotLabel(o)}</td></tr>`;}
 /* Bảng chiết màu: lọc theo loại sản phẩm (sơn 1kg / hũ mini), gom theo màu + tồn, in được */
 function chietTable(){
   var TYPES=[['son1kg','Lon sơn 1kg'],['mini','Hũ sơn mini (L-MZ)']];
@@ -8567,6 +8569,7 @@ function seedHoan(){ if(DATA._hoanSeed==='v5')return; if(!DATA.hoan)DATA.hoan={}
 }
 seedHoan();
 try{normalizeCombos();}catch(e){}
+try{backfillGio();}catch(e){}
 buildTabs();
 rTongquan();rSanpham();rTonkho();rNhapxuat();rXuatkho();rKiemkho();rDashboard();
 syncInit();syncBadge(SYNC.on?'ok':'off');if(SYNC.on&&SYNC.url){syncPull(function(ok){if(ok){try{seedHoan();}catch(e){}}refreshAllPanels();});}syncAutoStart();
