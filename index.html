@@ -6929,13 +6929,25 @@ function go(t){
 /* ============ RENDERS ============ */
 function H(vi,zh){return `<div class="h">${vi}<span class="zh">${zh}</span></div>`;}
 
+let tqMode='thang', tqMonth='', tqDay='', tqFrom='', tqTo='';
+function tqMonthsList(){return uniq(DATA.orders.map(function(o){return (o.ngay||'').slice(0,7);}).filter(Boolean)).sort();}
+function tqMaxDate(){var ds=DATA.orders.map(function(o){return o.ngay||'';}).filter(Boolean).sort();return ds.length?ds[ds.length-1]:new Date().toISOString().slice(0,10);}
+function tqInPeriod(d){if(!d)return false;if(tqMode==='thang')return d.slice(0,7)===tqMonth;if(tqMode==='ngay')return d===tqDay;return d>=tqFrom&&d<=tqTo;}
+function tqDateList(){var out=[];if(tqMode==='thang'){var y=+tqMonth.slice(0,4),mo=+tqMonth.slice(5,7),n=new Date(y,mo,0).getDate();for(var i=1;i<=n;i++)out.push(tqMonth+'-'+(i<10?'0'+i:i));}else if(tqMode==='range'){var s=new Date(tqFrom+'T00:00:00'),e=new Date(tqTo+'T00:00:00');for(var dt=new Date(s);dt<=e;dt.setDate(dt.getDate()+1))out.push(dt.toISOString().slice(0,10));}return out;}
+function tqSetMode(m){tqMode=m;rTongquan();}
 function rTongquan(){
+  var months=tqMonthsList(), maxD=tqMaxDate();
+  if(!tqMonth)tqMonth=months.length?months[months.length-1]:maxD.slice(0,7);
+  if(!tqDay)tqDay=maxD;
+  if(!tqTo)tqTo=maxD;
+  if(!tqFrom){var _f=new Date(maxD+'T00:00:00');_f.setDate(_f.getDate()-6);tqFrom=_f.toISOString().slice(0,10);}
   var M=computeTon(); var dRun=Math.max(1,kyDaysRun(6)); ensureTonCfg();
   var prods=DATA.products.filter(p=>!p.combo&&p.type!=='Combo');
   var warn=[];
   prods.forEach(function(p){var r=M[p.code]||{dk:0,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0};var out=r.nb+r.hd+r.bh+r.qt+r.sx;var ton=r.dk+r.moi-out;var tb=out/dRun;var con=tb>0?Math.round(ton/tb):'∞';var min=tonMinOf(p.code);if(ton<=0||(con!=='∞'&&con<min))warn.push({code:p.code,ton:ton,con:con});});
   warn.sort(function(a,b){return ((a.con==='∞')?9e9:a.con)-((b.con==='∞')?9e9:b.con);});
-  var om={}; DATA.orders.forEach(function(o){(om[o.madon]=om[o.madon]||[]).push(o);});
+  var forders=DATA.orders.filter(function(o){return tqInPeriod(o.ngay);});
+  var om={}; forders.forEach(function(o){(om[o.madon]=om[o.madon]||[]).push(o);});
   var dons=Object.keys(om); var isHuy=function(m){return om[m][0].tthd==='huy';};
   var tongDon=dons.length;
   var daXuat=dons.filter(function(m){return !isHuy(m)&&om[m].every(function(l){return l.tt==='Da xuat';});}).length;
@@ -6947,26 +6959,42 @@ function rTongquan(){
   var byK=KENH.map(function(k){return dons.filter(function(m){return om[m][0].kenh===k;}).length;});
   var lastDot=uniq(DATA.orders.filter(function(o){return o.tt==='Da xuat'&&o.dot;}).map(function(o){return o.dot;})).sort().reverse()[0]||'—';
   var kpi=function(l,zh,v,c){return '<div class="kpi"><div class="l">'+l+' <span class="zh">'+zh+'</span></div><div class="v"'+(c?(' style="color:'+c+'"'):'')+'>'+v+'</div></div>';};
-  el('p-tongquan').innerHTML=H('Tổng quan','總覽')+`
-  <div class="kpis" style="margin-top:14px">
+  var modes=[['thang','Theo tháng / 按月'],['ngay','Theo ngày / 按日'],['range','Khoảng ngày / 自訂']];
+  var seg=modes.map(function(x){return '<button class="btn'+(tqMode===x[0]?' pri':'')+'" onclick="tqSetMode(\''+x[0]+'\')">'+x[1]+'</button>';}).join('');
+  var picker='';
+  if(tqMode==='thang'){picker='<select onchange="tqMonth=this.value;rTongquan()" style="font-weight:600">'+months.map(function(m){return '<option value="'+m+'" '+(m===tqMonth?'selected':'')+'>Tháng '+m.slice(5,7)+'/'+m.slice(0,4)+'</option>';}).join('')+'</select>';}
+  else if(tqMode==='ngay'){picker='<input type="date" value="'+tqDay+'" onchange="tqDay=this.value;rTongquan()">';}
+  else{picker='<span class="sub">Từ</span> <input type="date" value="'+tqFrom+'" onchange="tqFrom=this.value;rTongquan()"> <span class="sub">đến</span> <input type="date" value="'+tqTo+'" onchange="tqTo=this.value;rTongquan()">';}
+  var periodLbl=tqMode==='thang'?('Tháng '+tqMonth.slice(5,7)+'/'+tqMonth.slice(0,4)):(tqMode==='ngay'?('Ngày '+tqDay):('Từ '+tqFrom+' đến '+tqTo));
+  var chartHtml='';
+  if(tqMode!=='ngay'){
+    var perDay={}; dons.forEach(function(m){var d=om[m][0].ngay;perDay[d]=(perDay[d]||0)+1;});
+    var list=tqDateList(); var mx=Math.max.apply(null,list.map(function(d){return perDay[d]||0;}).concat([1]));
+    var bars=list.map(function(d){var v=perDay[d]||0;var h=Math.round(4+(v/mx)*92);return '<div style="flex:1 0 16px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px" title="'+d+': '+v+' đơn"><div style="font-size:9px;color:var(--muted)">'+(v||'')+'</div><div style="width:66%;height:'+h+'px;background:#185fa5;opacity:.85;border-radius:3px 3px 0 0"></div><div style="font-size:9px;color:var(--muted)">'+d.slice(8,10)+'</div></div>';}).join('');
+    chartHtml='<div class="card" style="padding:12px 14px;margin-top:10px"><b>Đơn theo ngày / 每日訂單</b> <span class="sub">'+periodLbl+'</span><div style="display:flex;align-items:flex-end;gap:2px;height:130px;overflow-x:auto;margin-top:8px">'+bars+'</div></div>';
+  }
+  el('p-tongquan').innerHTML=H('Tổng quan','總覽')+
+  '<div class="bar" style="margin-top:10px;flex-wrap:wrap;gap:8px"><div style="display:inline-flex;gap:6px">'+seg+'</div><div class="sp"></div>'+picker+'</div>'+
+  '<div class="sub" style="margin:8px 0 2px">Đang xem / 檢視: <b>'+periodLbl+'</b></div>'+`
+  <div class="kpis" style="margin-top:6px">
     ${kpi('Tổng đơn','總訂單',num(tongDon))}
     ${kpi('Chờ xuất kho','待出貨',num(choXuat),'var(--amber)')}
     ${kpi('Đã xuất','已出貨',num(daXuat),'var(--green)')}
-    ${kpi('Cần đặt thêm','需補貨',num(warn.length),'var(--red)')}
+    ${kpi('Doanh thu đơn đã xuất','已出貨營收',tienFmt(dt)||'0đ')}
   </div>
   <div class="kpis" style="margin-top:6px">
-    ${kpi('Doanh thu đơn đã xuất','已出貨營收',tienFmt(dt)||'0đ')}
-    ${kpi('Hoàn hàng','退貨單',num(hoanN),'#9a5b00')}
     ${kpi('Đơn hủy','取消訂單',num(huyN),'var(--red)')}
+    ${kpi('Hoàn hàng','退貨單',num(hoanN),'#9a5b00')}
+    ${kpi('Cần đặt thêm (tồn hiện tại)','需補貨',num(warn.length),'var(--red)')}
     ${kpi('Đợt xuất gần nhất','最近批次',lastDot)}
-  </div>
+  </div>`+chartHtml+`
   <div style="display:grid;grid-template-columns:1fr 1.3fr;gap:14px;margin-top:10px">
-    <div class="card" style="padding:12px 14px"><b>Đơn theo kênh / 各管道訂單</b>
+    <div class="card" style="padding:12px 14px"><b>Đơn theo kênh / 各管道訂單</b> <span class="sub">${periodLbl}</span>
       <table style="margin-top:8px"><tr><th>Kênh / 管道</th><th class="r">Số đơn / 訂單數</th></tr>
       ${KENH.map(function(k,i){return '<tr><td>'+k+'</td><td class="r"><b>'+num(byK[i])+'</b></td></tr>';}).join('')}
       </table>
     </div>
-    <div class="card" style="padding:12px 14px"><b>Cảnh báo tồn / 庫存警告</b> <span class="sub">(${warn.length} mã / 項需注意)</span>
+    <div class="card" style="padding:12px 14px"><b>Cảnh báo tồn / 庫存警告</b> <span class="sub">(${warn.length} mã · tồn hiện tại, không theo kỳ)</span>
       <table style="margin-top:8px"><tr><th>SKU / 編號</th><th>Tên / 品名</th><th class="r">Tồn / 庫存</th><th class="r">Ngày còn / 可用</th></tr>
       ${warn.slice(0,8).map(function(x){return '<tr><td class="mono">'+x.code+'</td><td>'+nm(x.code)+'</td><td class="r">'+num(x.ton)+'</td><td class="r"><span class="tag '+(x.con==='∞'||x.con>15?'t-ok':(x.con<=0?'t-red':'t-warn'))+'">'+x.con+'</span></td></tr>';}).join('')||'<tr><td colspan="4" class="sub">Không có cảnh báo / 無警告</td></tr>'}
       </table>
@@ -7325,11 +7353,29 @@ let tonSel={},tonShowHidden=false;
 function ensureTonCfg(){ if(!DATA.tonCfg)DATA.tonCfg={}; }
 function tonMinOf(code){ ensureTonCfg(); return DATA.tonCfg[code]!=null?DATA.tonCfg[code]:30; }
 function setTonMin(code,v){ ensureTonCfg(); DATA.tonCfg[code]=Number(v)||0; save(); rTonDraw(); }
-function ensureTonHide(){ if(!DATA.tonHide)DATA.tonHide={}; if(!DATA.m2Cfg)DATA.m2Cfg={}; }
+function ensureTonHide(){ if(!DATA.tonHide)DATA.tonHide={}; if(!DATA.m2Cfg)DATA.m2Cfg={}; if(!DATA.m2Cats)DATA.m2Cats=['san']; if(!DATA.conv)DATA.conv={}; Object.keys(DATA.m2Cfg).forEach(function(c){ if(DATA.m2Cfg[c]&&!DATA.conv[c])DATA.conv[c]={per:Number(DATA.m2Cfg[c])||0,unit:'m²'}; }); }
+function tonM2Applies(p){ ensureTonHide(); return (DATA.m2Cats.indexOf(p.ck)>=0) || (DATA.m2Cfg[p.code]!=null&&DATA.m2Cfg[p.code]!==''); }
+function tonAddM2(code){ var v=prompt('Quy đổi cho '+code+':\nNhập số đơn vị = 1 m² (vd 7 nghĩa là 7 tấm = 1 m²).\nĐể trống = bỏ quy đổi.'); if(v===null)return; setTonM2(code,(v||'').trim()); }
+function tonM2CatModal(){ ensureTonHide(); var cats=uniq(DATA.products.map(function(p){return p.ck;}).filter(Boolean));
+  var rows=cats.map(function(ck){return '<label style="display:block;margin:4px 0"><input type="checkbox" '+(DATA.m2Cats.indexOf(ck)>=0?'checked':'')+' onchange="tonM2CatToggle(\''+ck+'\',this.checked)"> '+((DATA.cats&&DATA.cats[ck])||ck)+'</label>';}).join('');
+  modal('<div style="padding:16px 18px"><div style="font-weight:700;font-size:15px;margin-bottom:6px">⚙ Danh mục dùng quy đổi m² / 換算類別</div><div class="sub">Chỉ danh mục được tick mới TỰ hiện ô quy đổi (vd Sàn nhựa). Danh mục khác vẫn thêm tay bằng nút ＋ quy đổi ở từng mã.</div><div style="margin-top:10px;max-height:300px;overflow:auto">'+(rows||'<span class="sub">Chưa có danh mục</span>')+'</div><div class="bar" style="margin-top:12px;justify-content:flex-end"><button class="btn pri" onclick="closeModal()">Xong 完成</button></div></div>'); }
+function tonM2CatToggle(ck,on){ ensureTonHide(); var i=DATA.m2Cats.indexOf(ck); if(on&&i<0)DATA.m2Cats.push(ck); if(!on&&i>=0)DATA.m2Cats.splice(i,1); save(); rTonDraw(); }
 function tonPick(code,v){ ensureTonHide(); if(v)tonSel[code]=true; else delete tonSel[code]; }
 function tonSelAll(v){ document.querySelectorAll('#tblTon tbody input[type=checkbox]').forEach(function(cb){ cb.checked=v; var c=cb.getAttribute('data-c'); if(c)tonPick(c,v); }); }
 function tonHideSel(hide){ ensureTonHide(); var n=0; Object.keys(tonSel).forEach(function(c){ if(tonSel[c]){ if(hide)DATA.tonHide[c]=true; else delete DATA.tonHide[c]; n++; } }); if(!n){alert('Chưa chọn mã nào (tick ô vuông đầu dòng).');return;} tonSel={}; save(); rTonDraw(); }
-function tonM2Of(code){ ensureTonHide(); if(DATA.m2Cfg[code]!=null&&DATA.m2Cfg[code]!=='')return Number(DATA.m2Cfg[code]); var p=P(code); if(p&&p.unit==='tấm'&&/^LS-DK-9/.test(code))return 7; return 0; }
+function ensurePlan(){ if(!DATA.plan)DATA.plan={}; }
+function planRate(code){ var M=computeTon(); var r=M[code]||{dk:0,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0}; var out=r.nb+r.hd+r.bh+r.qt+r.sx; var dRun=Math.max(1,kyDaysRun(tonMonth)); var tb=out/dRun; var cv=tonConvOf(code); return cv&&cv.per>0?(tb/cv.per):tb; }
+function setPlan(code,v){ ensurePlan(); v=Number(v)||0; if(v>0)DATA.plan[code]=v; else delete DATA.plan[code]; save(); rTonDraw(); }
+function setPlanDays(code,v){ ensurePlan(); var d=Number(v)||0; var rate=planRate(code); if(d>0&&rate>0)DATA.plan[code]=Math.round(d*rate*100)/100; else delete DATA.plan[code]; save(); rTonDraw(); }
+function tonConvOf(code){ ensureTonHide(); if(DATA.conv[code]&&DATA.conv[code].per>0)return DATA.conv[code]; var p=P(code); if(p&&DATA.m2Cats.indexOf(p.ck)>=0&&p.unit==='tấm')return {per:7,unit:'m²'}; return null; }
+function tonConvModal(code){ ensureTonHide(); var cv=DATA.conv[code]||tonConvOf(code)||{per:'',unit:''};
+  modal('<div style="padding:16px 18px"><div style="font-weight:700;margin-bottom:2px">Quy đổi đơn vị · 單位換算</div><div class="sub" style="margin-bottom:10px">'+code+' — '+((nm(code))||'')+'</div>'
+   +'<div class="bar" style="gap:6px;align-items:center"><span class="sub">Cứ</span><input id="cvPer" type="number" value="'+(cv.per||'')+'" style="width:90px" placeholder="số lượng"><b>'+(unit(code)||'đvt')+'</b><span class="sub">= 1</span><input id="cvUnit" value="'+((cv.unit||'').replace(/"/g,"&quot;"))+'" style="width:120px" placeholder="đơn vị mới (m², thùng, lít...)"></div>'
+   +'<div class="note" style="margin-top:8px">VD: 7 tấm = 1 m² · 12 hộp = 1 thùng · 1000 ml = 1 lít. Cạnh số tồn/xuất sẽ hiện thêm "≈ giá trị quy đổi".</div>'
+   +'<div class="bar" style="margin-top:12px;justify-content:flex-end"><button class="btn" style="color:var(--red)" onclick="tonConvClear(\''+code+'\')">Xoá quy đổi</button><button class="btn pri" onclick="tonConvSave(\''+code+'\')">Lưu 儲存</button></div></div>'); }
+function tonConvSave(code){ ensureTonHide(); var per=Number(el('cvPer').value)||0; var u=(el('cvUnit').value||'').trim(); if(per>0&&u)DATA.conv[code]={per:per,unit:u}; else delete DATA.conv[code]; save(); closeModal(); rTonDraw(); }
+function tonConvClear(code){ ensureTonHide(); delete DATA.conv[code]; save(); closeModal(); rTonDraw(); }
+function tonM2Of(code){ ensureTonHide(); if(DATA.m2Cfg[code]!=null&&DATA.m2Cfg[code]!=='')return Number(DATA.m2Cfg[code]); var p=P(code); if(p&&DATA.m2Cats.indexOf(p.ck)>=0&&p.unit==='tấm')return 7; return 0; }
 function setTonM2(code,v){ ensureTonHide(); if(v===''||v==null)delete DATA.m2Cfg[code]; else DATA.m2Cfg[code]=Number(v)||0; save(); rTonDraw(); }
 function kyDays(m){var y=2026;var sd=new Date(y,m-2,26),ed=new Date(y,m-1,25);return Math.max(1,Math.round((ed-sd)/86400000)+1);}
 function kyDaysRun(m){var y=2026;var sd=new Date(y,m-2,26),ed=new Date(y,m-1,25,23,59,59);var now=new Date();if(now<sd)return 0;if(now>ed)return kyDays(m);return Math.floor((now-sd)/86400000)+1;}
@@ -7355,7 +7401,7 @@ function rTonkho(){
     <select onchange="tonCat=this.value;rTonDraw()" style="font-weight:600">${catOpts}</select>
     <select onchange="tonWarn=this.value;rTonDraw()" style="font-weight:600">${warnOpts}</select>
     <input id="tonFind" placeholder="Tìm SKU / tên · 搜尋" value="${tonFind}" oninput="tonApply()" style="flex:1;min-width:150px">
-    <div class="sp"></div><button class="btn" onclick="tonHideSel(true)">🚫 Ẩn đã chọn</button><button class="btn" onclick="tonHideSel(false)">↩ Bỏ ẩn</button><label class="sub" style="display:inline-flex;align-items:center;gap:4px;margin:0 4px"><input type="checkbox" ${tonShowHidden?'checked':''} onchange="tonShowHidden=this.checked;rTonkho()"> Hiện mã đã ẩn</label><button class="btn gr" onclick="exportXLSX('tblTon','Theo doi ton')">⬇ Xuất Excel 匯出</button></div>
+    <div class="sp"></div><button class="btn" onclick="tonHideSel(true)">🚫 Ẩn đã chọn</button><button class="btn" onclick="tonHideSel(false)">↩ Bỏ ẩn</button><label class="sub" style="display:inline-flex;align-items:center;gap:4px;margin:0 4px"><input type="checkbox" ${tonShowHidden?'checked':''} onchange="tonShowHidden=this.checked;rTonkho()"> Hiện mã đã ẩn</label><button class="btn" onclick="tonM2CatModal()" title="Cấu hình danh mục dùng quy đổi m²">⚙ Quy đổi m²</button><button class="btn gr" onclick="exportXLSX('tblTon','Theo doi ton')">⬇ Xuất Excel 匯出</button></div>
   <div id="tonCount" class="sub" style="margin:0 0 8px;font-weight:500"></div>
   <div class="card scroll"><table id="tblTon"></table></div>
   <div class="note">Áp tất cả mã SP. <b>Số tồn</b> = Tồn đầu + Tồn mới − Tổng xuất. <b>TB/ngày</b> chia theo số ngày <b>đã chạy</b> trong kỳ (26 → hôm nay). <b>Cảnh báo</b>: dưới ngưỡng (sửa từng mã) → cần đặt thêm; trên 2 tháng → tồn lâu.</div>`;
@@ -7369,8 +7415,8 @@ function rTonDraw(){
   var q=(tonFind||'').toLowerCase();var nd=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');
   if(q)prods=prods.filter(p=>nd((p.code+' '+(p.vi||'')+' '+(p.zh||'')+' '+(p.color||'')+' '+(p.size||'')).toLowerCase()).indexOf(nd(q))>=0);
   var dRun=kyDaysRun(tonMonth), dd=Math.max(1,dRun);
-  var Z1='#3a4d66',Z2='#2f6fb0',Z3='#bf5340',Z4='#2e9b6a',Z5='#7559a8';
-  var T1='#eef1f6',T2='#eaf2fb',T3='#fdeeeb',T4='#e9f7ef',T5='#f2ecfa';
+  var Z1='#3a4d66',Z2='#2f6fb0',Z3='#bf5340',Z4='#2e9b6a',Z5='#7559a8',Z6='#0e7c86';
+  var T1='#eef1f6',T2='#eaf2fb',T3='#fdeeeb',T4='#e9f7ef',T5='#f2ecfa',T6='#e3f3f5';
   var GAP='border-left:14px solid var(--bg)';          // KHOẢNG TRỐNG = màu nền trang -> khối tách hẳn
   var g=c=>`background:${c};color:#fff;font-weight:800;font-size:12px;letter-spacing:.4px;text-align:center;padding:9px 6px;white-space:nowrap`;
   var ss=t=>`background:${t};color:#1f2937;font-weight:700;font-size:12px;white-space:nowrap;padding:7px 6px`;
@@ -7383,16 +7429,17 @@ function rTonDraw(){
       <th colspan="6" style="${g(Z3)};${GAP}">③ XUẤT KHO <span style="font-weight:500">出庫</span></th>
       <th colspan="4" style="${g(Z4)};${GAP}">④ TỒN HIỆN TẠI <span style="font-weight:500">現有庫存</span></th>
       <th colspan="2" style="${g(Z5)};${GAP}">⑤ DỰ BÁO & CẢNH BÁO <span style="font-weight:500">預測警示</span></th>
+      <th colspan="3" style="${g(Z6)};${GAP}">⑥ DỰ KIẾN ĐẶT HÀNG <span style="font-weight:500">預計訂貨</span></th>
     </tr>
     <tr>
       <th style="${ss(T1)};width:26px;text-align:center"><input type="checkbox" onclick="tonSelAll(this.checked)" title="Chọn tất cả đang hiện"></th><th style="${ss(T1)}">SKU<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">編號</span></th><th style="${ss(T1)}">Tên sản phẩm <br><span style="font-weight:600;font-size:10.5px;color:#111827">品名</span></th><th style="${ss(T1)}">ĐVT<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">單位</span></th>
       <th class="r" style="${ss(T2)};${GAP}">Tồn đầu kỳ<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">期初</span></th><th class="r" style="${ss(T2)}">Nhập kho<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">進貨</span></th>
       <th class="r" style="${ss(T3)};${GAP}">Bán hàng<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">銷售</span></th><th class="r" style="${ss(T3)}">Nội bộ<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">內部</span></th><th class="r" style="${ss(T3)}">Sản xuất<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">生產</span></th><th class="r" style="${ss(T3)}">Hoạt động<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">活動</span></th><th class="r" style="${ss(T3)}">Quà tặng<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">贈品</span></th><th class="r" style="${ss('#f6d7d1')};font-weight:800">Tổng xuất<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">總出庫</span></th>
       <th class="r" style="${ss(T4)};${GAP}">Số tồn thực<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">實際庫存</span></th><th class="r" style="${ss(T4)}">TB bán/ngày <span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">日均銷</span><br><span style="font-weight:500;color:#5b6b80">÷ ${dRun} ngày</span></th><th class="r" style="${ss(T4)}">TB dùng/ngày <span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">日均用</span><br><span style="font-weight:500;color:#5b6b80">÷ ${dRun} ngày</span></th><th class="r" style="${ss(T4)}">Ngày còn<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">可用天數</span></th>
-      <th class="r" style="${ss(T5)};${GAP}">Ngưỡng (ngày)<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">警戒天數</span></th><th style="${ss(T5)};text-align:center">Cảnh báo<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">警示</span></th>
+      <th class="r" style="${ss(T5)};${GAP}">Ngưỡng (ngày)<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">警戒天數</span></th><th style="${ss(T5)};text-align:center">Cảnh báo<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">警示</span></th><th class="r" style="${ss(T6)};${GAP}">SL dự kiến đặt<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">預計訂量</span></th><th style="${ss(T6)}">ĐVT đặt<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">訂貨單位</span></th><th class="r" style="${ss(T6)}">Số ngày dùng<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">可用天數</span></th>
     </tr></thead><tbody>`;
   var nLow=0,nOver=0,shown=0,bodyRows='';
-  prods.forEach(p=>{var r=m[p.code]||{code:p.code,dk:0,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0};var mm=tonM2Of(p.code);
+  prods.forEach(p=>{var r=m[p.code]||{code:p.code,dk:0,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0};var cv=tonConvOf(p.code);var mm=cv?cv.per:0;var cu=cv?cv.unit:'';var ordU=cv?cv.unit:unit(p.code);var pQty=(DATA.plan&&DATA.plan[p.code])||'';
     var out=r.nb+r.hd+r.bh+r.qt+r.sx;var ton=r.dk+r.moi-out;
     var tbBan=+(r.bh/dd).toFixed(2),tbTong=+(out/dd).toFixed(2);
     var con=tbTong>0?Math.round(ton/tbTong):'∞';
@@ -7410,14 +7457,14 @@ function rTonDraw(){
       : con==='∞'?'<span class="sub">—</span>'
       : '<span style="color:#1e8e4e;font-weight:600">✓ Bình thường</span>';
     bodyRows+=`<tr>
-      <td style="text-align:center"><input type="checkbox" data-c="${p.code}" ${tonSel[p.code]?'checked':''} onchange="tonPick('${p.code}',this.checked)"></td><td class="mono">${p.code}</td><td>${nm(p.code)}<br><span class="zh" style="font-size:10.5px;color:#9aa6b6">${zh(p.code)||''}</span></td><td class="sub">${unit(p.code)}<br><input type="number" value="${mm||''}" placeholder="tấm/m²" title="Số tấm = 1 m² (quy đổi)" onchange="setTonM2('${p.code}',this.value)" style="width:54px;padding:1px 3px;font-size:10px"></td>
+      <td style="text-align:center"><input type="checkbox" data-c="${p.code}" ${tonSel[p.code]?'checked':''} onchange="tonPick('${p.code}',this.checked)"></td><td class="mono">${p.code}</td><td>${nm(p.code)}<br><span class="zh" style="font-size:10.5px;color:#9aa6b6">${zh(p.code)||''}</span></td><td class="sub">${unit(p.code)}${cv?'<br><span style="font-size:9.5px;white-space:nowrap;color:#475569">'+cv.per+' '+unit(p.code)+' = 1 '+cv.unit+' <a onclick="tonConvModal(\''+p.code+'\')" style="cursor:pointer;color:#2563b0;font-weight:700">✎</a></span>':'<br><button class="btn" style="padding:0 5px;font-size:9px;color:#2563b0" onclick="tonConvModal(\''+p.code+'\')" title="Thêm quy đổi đơn vị">＋ quy đổi</button>'}</td>
       <td class="r" style="${GAP}">${dim(r.dk)}</td><td class="r" style="color:${r.moi<0?'#c0392b':'#1e8e4e'};font-weight:600">${r.moi?((r.moi>0?'+':'')+num(r.moi)):dash}</td>
-      <td class="r" style="${GAP}color:#26344a;font-weight:600">${dim(r.bh)}${mm&&r.bh?'<br><span class="sub" style="font-size:10px">≈ '+(r.bh/mm).toFixed(2)+' m²</span>':''}</td><td class="r" style="color:#6b7280">${dim(r.nb)}</td><td class="r" style="color:#6b7280">${dim(r.sx)}</td><td class="r" style="color:#6b7280">${dim(r.hd)}</td><td class="r" style="color:#6b7280">${dim(r.qt)}</td><td class="r" style="font-weight:700;background:#fdf4f3;color:#b03a2e">${out?num(out):dash}${mm&&out?'<br><span class="sub" style="font-size:10px;color:#b03a2e">≈ '+(out/mm).toFixed(2)+' m²</span>':''}</td>
-      <td class="r" style="${GAP}">${pill(num(ton),tonBg)}${mm?'<br><span class="sub" style="font-size:10px">≈ '+(ton/mm).toFixed(2)+' m²</span>':''}</td><td class="r" style="color:#26344a">${tbBan||dash}</td><td class="r" style="color:#6b7280">${tbTong||dash}</td><td class="r">${pill(con,ngBg)}</td>
+      <td class="r" style="${GAP}color:#26344a;font-weight:600">${dim(r.bh)}${mm&&r.bh?'<br><span class="sub" style="font-size:10px">≈ '+(r.bh/mm).toFixed(2)+' '+cu+'</span>':''}</td><td class="r" style="color:#6b7280">${dim(r.nb)}</td><td class="r" style="color:#6b7280">${dim(r.sx)}</td><td class="r" style="color:#6b7280">${dim(r.hd)}</td><td class="r" style="color:#6b7280">${dim(r.qt)}</td><td class="r" style="font-weight:700;background:#fdf4f3;color:#b03a2e">${out?num(out):dash}${mm&&out?'<br><span class="sub" style="font-size:10px;color:#b03a2e">≈ '+(out/mm).toFixed(2)+' '+cu+'</span>':''}</td>
+      <td class="r" style="${GAP}">${pill(num(ton),tonBg)}${mm?'<br><span class="sub" style="font-size:10px">≈ '+(ton/mm).toFixed(2)+' '+cu+'</span>':''}</td><td class="r" style="color:#26344a">${tbBan||dash}</td><td class="r" style="color:#6b7280">${tbTong||dash}</td><td class="r">${pill(con,ngBg)}</td>
       <td class="r" style="${GAP}"><input type="number" value="${min}" onchange="setTonMin('${p.code}',this.value)" style="width:56px;text-align:right;padding:2px 4px"></td>
-      <td style="text-align:center;font-size:12px">${cb}</td>
+      <td style="text-align:center;font-size:12px">${cb}</td><td class="r" style="${GAP}"><input type="number" value="${pQty}" placeholder="SL" onchange="setPlan('${p.code}',this.value)" style="width:74px;text-align:right;padding:2px 4px"></td><td class="sub" style="white-space:nowrap">${ordU}</td><td class="r"><input type="number" value="${(pQty&&planRate(p.code)>0)?Math.round(pQty/planRate(p.code)):''}" placeholder="ngày" onchange="setPlanDays('${p.code}',this.value)" style="width:62px;text-align:right;padding:2px 4px"></td>
     </tr>`;});
-  if(!shown)bodyRows=`<tr><td colspan="18" class="sub" style="text-align:center;padding:14px">Không có mã phù hợp bộ lọc.</td></tr>`;
+  if(!shown)bodyRows=`<tr><td colspan="21" class="sub" style="text-align:center;padding:14px">Không có mã phù hợp bộ lọc.</td></tr>`;
   el('tblTon').innerHTML=h+bodyRows+'</tbody>';
   var ce=el('tonCount');if(ce)ce.innerHTML='Hiện <b>'+shown+'</b> mã '+(tonSub==='nvl'?'nguyên liệu':'thành phẩm')+' · cần đặt thêm: <b style="color:#b9770e">'+nLow+'</b> · tồn lâu: <b style="color:#2563b0">'+nOver+'</b> · TB chia theo <b>'+dRun+' ngày</b> đã chạy';
 }
@@ -7650,6 +7697,13 @@ function rHoanHuy(){ ensureHoan(); ensureSonLe(); if(!el('hoanBody'))return;
   var map={},order=[];
   DATA.orders.forEach((o,i)=>{var isHH=o.tthd==='huy'||DATA.hoan[o.madon];if(!isHH)return;if(!map[o.madon]){map[o.madon]={o:o,lines:[],idx:[]};order.push(o.madon);}map[o.madon].lines.push(o);map[o.madon].idx.push(i);});
   var rows=order.map(m=>map[m]);
+  // FIX SAP XEP: don & ngay moi nhat len dau (giam dan theo ngay roi gio)
+  rows.sort(function(a,b){var ka=(a.o.ngay||'')+' '+(a.o.gio||'');var kb=(b.o.ngay||'')+' '+(b.o.gio||'');return kb.localeCompare(ka);});
+  // THONG BAO: dem don HUY SAU XUAT can thu hoi tra ton (bo qua Huy truoc xuat, va don da thu hoi)
+  var needRecall=rows.filter(function(g){var o=g.o;var ex=g.lines.some(function(l){return l.tt==='Da xuat';});var hh=DATA.hoan[o.madon]||{};return o.tthd==='huy'&&ex&&!hh.thuhoi;});
+  var alertBanner=needRecall.length
+    ? `<div style="margin-top:8px;background:#fcebeb;border:1px solid #f0b6b6;border-left:5px solid #d23c3c;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:12px"><span style="font-size:20px">⚠️</span><div style="flex:1"><b style="color:#a32d2d;font-size:14px">Có ${needRecall.length} đơn HỦY SAU XUẤT cần thu hồi xuất (trả tồn)</b><div class="sub" style="color:#a32d2d">需回收出貨（退回庫存） · Bấm nút bên phải để lọc &amp; xử lý.</div></div><button class="btn pri" onclick="hhF.sit='huysau';hhF.step='';hhF.stt='chua';rHoanHuy()">Xem ${needRecall.length} đơn →</button></div>`
+    : `<div style="margin-top:8px;background:#e9f7ef;border:1px solid #b6e0c8;border-left:5px solid #1e8e4e;border-radius:10px;padding:8px 14px;color:#0f6e56;font-weight:600">✓ Không có đơn cần thu hồi xuất trả tồn · 沒有需回收的訂單</div>`;
   var sitOpts=[['','Tình huống 情況: tất cả'],['huytruoc','Hủy trước xuất'],['huysau','Hủy sau xuất'],['hoan','Hoàn (đã giao)']];
   var stepOpts=[['','Quy trình 流程: tất cả'],['none','— không cần / chưa chọn'],['cho','① Chờ về kho'],['kiem','② Đang kiểm tra'],['nhaplai','③ Nhập lại kho'],['sonle','③ → Kho sơn lẻ'],['loaibo','③ Loại bỏ']];
   var sttOpts=[['','Thao tác 操作: tất cả'],['chua','Chưa xử lý'],['dang','Đang xử lý'],['xong','Đã xong']];
@@ -7719,7 +7773,7 @@ function rHoanHuy(){ ensureHoan(); ensureSonLe(); if(!el('hoanBody'))return;
     });}
   });
   if(!H)H=`<tr><td colspan="9" class="sub" style="text-align:center;padding:14px">Không có đơn khớp bộ lọc. Đơn Haravan bị hủy tự về đây sau mỗi lần kéo; hoặc đánh dấu hoàn thủ công bên dưới.</td></tr>`;
-  el('hoanBody').innerHTML=toggle+bar+manual+
+  el('hoanBody').innerHTML=toggle+alertBanner+bar+manual+
    `<div class="card scroll"><table id="tblHoan"><tr><th>Mã đơn<br><span style="font-weight:600;font-size:10.5px;color:#111827">訂單編號</span></th><th>Kênh<br><span style="font-weight:600;font-size:10.5px;color:#111827">管道</span></th><th>Ngày<br><span style="font-weight:600;font-size:10.5px;color:#111827">日期</span></th><th>Sản phẩm<br><span style="font-weight:600;font-size:10.5px;color:#111827">商品</span></th><th class="r">SL đơn<br><span style="font-weight:600;font-size:10.5px;color:#111827">訂單數量</span></th><th class="r">Khách hoàn<br><span style="font-weight:600;font-size:10.5px;color:#111827">退貨數量</span></th><th>Tình huống<br><span style="font-weight:600;font-size:10.5px;color:#111827">情況</span></th><th>Quy trình hoàn<br><span style="font-weight:600;font-size:10.5px;color:#111827">退貨流程</span></th><th>Thao tác<br><span style="font-weight:600;font-size:10.5px;color:#111827">操作</span></th></tr>${H}</table></div>`+
    `<div class="note"><b>Hủy trước xuất:</b> tự nhận khi kéo đơn, không trừ tồn — không cần thao tác. <b>Hủy sau xuất:</b> bấm <b>↩ Thu hồi xuất</b> → cộng trả tồn (cũng làm được ngay tại tab ④). <b>Hoàn (đã giao):</b> tick từng SKU khách trả → nhập SL hoàn → chọn <b>Chờ về → Đang kiểm → Nhập lại kho</b>. SKU không tick = khách giữ. Sơn đã chiết màu khi "Nhập lại" sẽ vào <b>🎨 Kho sơn lẻ</b> (không nhập về base). Hàng hỏng chọn <b>Loại bỏ</b>.</div>`;
 }
