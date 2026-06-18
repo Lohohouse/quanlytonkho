@@ -7724,7 +7724,7 @@ function rHoanHuy(){ ensureHoan(); ensureSonLe(); if(!el('hoanBody'))return;
       var sitTag,act;
       if(!exported&&!hh.thuhoi){sitTag='<span class="tag" style="background:#faeeda;color:#854f0b;font-weight:700">Hủy trước xuất</span>';act='<span style="color:#1e8e4e;font-weight:600">✓ Không ảnh hưởng tồn</span>';}
       else if(exported&&!hh.thuhoi){sitTag='<span class="tag" style="background:#fcebeb;color:#a32d2d;font-weight:700">Hủy sau xuất</span>';act=`<button class="btn pri" onclick="hhThuHoi('${o.madon}')">↩ Thu hồi xuất (trả tồn)</button>`;}
-      else {sitTag='<span class="tag" style="background:#fcebeb;color:#a32d2d;font-weight:700">Hủy sau xuất</span>';act='<span style="background:#e1f5ee;color:#0f6e56;font-weight:700;border-radius:8px;padding:2px 9px;font-size:11px">✓ đã thu hồi — trả tồn</span>';}
+      else {sitTag='<span class="tag" style="background:#fcebeb;color:#a32d2d;font-weight:700">Hủy sau xuất</span>';act='<span style="background:#e1f5ee;color:#0f6e56;font-weight:700;border-radius:8px;padding:2px 9px;font-size:11px">✓ đã thu hồi</span>';}
       H+=`<tr><td class="mono">${o.madon}</td><td>${o.kenh}</td><td>${o.ngay}</td><td>${tenSan(o)}${g.lines.length>1?' <span class="sub">+'+(g.lines.length-1)+' SKU</span>':''}</td><td class="r">${slT}</td><td class="r"><span class="sub">—</span></td><td>${sitTag}</td><td><span class="sub">— không cần —</span></td><td>${act}</td></tr>`;
       return;
     }
@@ -7781,7 +7781,16 @@ function hhApply(){hhF.sit=v('hhSit');hhF.step=v('hhStep');hhF.stt=v('hhStt');rH
 function hhUndo(madon,sku){ ensureHoan();var L=(DATA.hoan[madon]&&DATA.hoan[madon].lines)?DATA.hoan[madon].lines[sku]:null;if(!L)return;var lon=L.sonleDone;if(!confirm('Hoàn tác cho SKU này?\n• '+(lon?'Lon sơn lẻ vừa thêm sẽ bị xoá khỏi Kho sơn lẻ.':'Phiếu nhập trong Xuất–Nhập SX sẽ bị xoá (trừ lại tồn).')+'\n• Quy trình quay về bước "② Đang kiểm tra".'))return;L.step='kiem';hhSync(madon,sku);save();hhKeep(rHoanHuy);}
 function hhKeep(fn){var host=el('hoanBody');var sy=(window.scrollY||0);var ct=null;if(host){var c=host.querySelector('.scroll');if(c)ct=c.scrollTop;}fn();var h2=el('hoanBody');if(h2&&ct!=null){var c2=h2.querySelector('.scroll');if(c2)c2.scrollTop=ct;}try{window.scrollTo(0,sy);}catch(e){}}
 function hhToggle(m){hhExpand[m]=!hhExpand[m];hhKeep(rHoanHuy);}
-function hhThuHoi(madon){ ensureHoan();if(!confirm('Thu hồi xuất kho đơn '+madon+'? Tồn sẽ được cộng trả lại.'))return;idxOf(madon).forEach(i=>{DATA.orders[i].tt='Da huy';});DATA.hoan[madon]=DATA.hoan[madon]||{};DATA.hoan[madon].thuhoi=true;save();if(el('hoanBody'))rHoanHuy();else rXKBanHang();}
+function hhThuHoi(madon){ ensureHoan();ensureSonLe();
+  if(!confirm('Thu hồi xuất kho đơn '+madon+'?\n• Sơn đã chiết màu (1kg/mini) → nhập về KHO SƠN LẺ.\n• Hàng khác (sơn lót, thú cưng, sàn, công cụ...) → cộng trả lại tồn.'))return;
+  DATA.hoan[madon]=DATA.hoan[madon]||{};DATA.hoan[madon].thuhoi=true;
+  idxOf(madon).forEach(function(i){ var o=DATA.orders[i];
+    if(isChietRet(o)){ var he=skuHe(o);var qty=Math.max(1,(+o.sl)||1);   // son chiet mau -> Kho son le, KHONG tra ve base (base da tieu hao khi chiet)
+      if(!DATA.sonLe.some(function(s){return s.srcType==='thuhoi'&&s.srcMadon===madon&&s.sku===o.sku;}))
+        DATA.sonLe.push({id:'SL'+Date.now()+Math.floor(Math.random()*900),srcType:'thuhoi',srcMadon:madon,sku:o.sku,ngay:hhTodayISO(),madon:madon,base:he.code,baseTen:he.name||nm(he.code),mau:o.mau,sl:qty,kenh:o.kenh,sonType:he.sonType,trangthai:'ton',nguoi:'',ghichu:'Thu hồi đơn hủy '+madon});
+    } else { o.tt='Da huy'; }   // hang thuong -> cong tra lai ton base
+  });
+  save();if(el('hoanBody'))rHoanHuy();else rXKBanHang();}
 function hhKeyMatchNx(r,madon,sku){ return (r.srcType==='hoan'&&r.srcMadon===madon&&r.srcSku===sku) || (r.mucdich==='Hoàn nhập lại'&&r.ghichu&&r.ghichu.indexOf('Hoàn SKU '+sku+' · đơn '+madon)>=0); }
 function hhClearLine(madon,sku){
   DATA.nx=(DATA.nx||[]).filter(r=>!hhKeyMatchNx(r,madon,sku));
@@ -8621,12 +8630,30 @@ function seedHoan(){ if(DATA._hoanSeed==='v5')return; if(!DATA.hoan)DATA.hoan={}
     DATA.sonLe.push({id:'SLDEMO1',ngay:'2026-06-06',madon:'TEST-SONLE-DEMO',base:'SM-V01-BP',baseTen:'Sơn base P - 1 kg',mau:'Hồng pastel',sku:'L-SM-0815-01P',sl:1,kenh:'Shopee',trangthai:'ton',nguoi:'',ghichu:'Hoàn từ đơn TEST-SONLE-DEMO'});
   DATA._hoanSeed='v5'; save();
 }
-seedHoan();
+function cleanTestData(){var isT=function(m){return /^TEST-/.test(String(m||''));};var ch=false;
+  if(DATA.orders){var n0=DATA.orders.length;DATA.orders=DATA.orders.filter(function(o){return !isT(o.madon);});if(DATA.orders.length!==n0)ch=true;}
+  if(DATA.hoan)Object.keys(DATA.hoan).forEach(function(m){if(isT(m)){delete DATA.hoan[m];ch=true;}});
+  if(DATA.sonLe){var s0=DATA.sonLe.length;DATA.sonLe=DATA.sonLe.filter(function(s){return !(isT(s.madon)||isT(s.srcMadon)||s.id==='SLDEMO1');});if(DATA.sonLe.length!==s0)ch=true;}
+  if(DATA.nx){var x0=DATA.nx.length;DATA.nx=DATA.nx.filter(function(r){return !(isT(r.srcMadon)||isT(r.madon));});if(DATA.nx.length!==x0)ch=true;}
+  if(ch)save();
+}
+function fixThuHoiChiet(){ ensureHoan();ensureSonLe();if(DATA._fixThuHoiChiet==='v1')return;var ch=false;
+  Object.keys(DATA.hoan||{}).forEach(function(m){var hh=DATA.hoan[m];if(!hh||!hh.thuhoi)return;
+    idxOf(m).forEach(function(i){var o=DATA.orders[i];
+      if(isChietRet(o)&&o.tt==='Da huy'){o.tt='Da xuat';var he=skuHe(o);var qty=Math.max(1,(+o.sl)||1);
+        if(!DATA.sonLe.some(function(s){return s.srcType==='thuhoi'&&s.srcMadon===m&&s.sku===o.sku;}))
+          DATA.sonLe.push({id:'SL'+Date.now()+Math.floor(Math.random()*900),srcType:'thuhoi',srcMadon:m,sku:o.sku,ngay:hhTodayISO(),madon:m,base:he.code,baseTen:he.name||nm(he.code),mau:o.mau,sl:qty,kenh:o.kenh,sonType:he.sonType,trangthai:'ton',nguoi:'',ghichu:'Thu hồi đơn hủy '+m+' (vá)'});
+        ch=true;}
+    });
+  });
+  DATA._fixThuHoiChiet='v1';if(ch)save();
+}
+cleanTestData();fixThuHoiChiet();
 try{normalizeCombos();}catch(e){}
 try{backfillGio();}catch(e){}
 buildTabs();
 rTongquan();rSanpham();rTonkho();rNhapxuat();rXuatkho();rKiemkho();rDashboard();
-syncInit();syncBadge(SYNC.on?'ok':'off');if(SYNC.on&&SYNC.url){syncPull(function(ok){if(ok){try{seedHoan();}catch(e){}}refreshAllPanels();});}syncAutoStart();
+syncInit();syncBadge(SYNC.on?'ok':'off');if(SYNC.on&&SYNC.url){syncPull(function(ok){if(ok){try{cleanTestData();fixThuHoiChiet();}catch(e){}}refreshAllPanels();});}syncAutoStart();
 </script>
 <div id="gModalWrap"></div>
 </body>
