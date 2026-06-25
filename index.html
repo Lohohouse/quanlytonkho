@@ -7554,7 +7554,8 @@ function nxDel(i){if(!confirm('Xoá phiếu này?'))return;DATA.nx.splice(i,1);s
 /* ---- XUẤT KHO ---- */
 let xkSub='banhang', xkBHSub='keo', xkSel={}, xkDotSet={}, xkExpand={};
 let xkF={kenh:'',thang:'',ngay:'',tuNgay:'',denNgay:'',dvvc:'',ttx:'',tthd:'',mau:'',find:''};
-let xkHideDone=true, xkChiet=false, xkChietType='son1kg';
+let xkHideDone=true, xkChiet=false, xkChietType='son1kg', xkChietReqOnly=false;
+function isChietReq(o){return !!(o&&(o._chiet|| /chietmau/i.test(o.sku||'')));}   // don chiet mau theo yeu cau — bam theo SKU GOC nen giu dau hieu sau khi doi SKU
 var HARS={cho:['Chờ lấy hàng','t-warn'],giao:['Đã có ĐVVC','t-info'],huy:['Đã hủy','t-red']};
 function tenSan(o){return o.tenSan||nm(skuKho(o.skuFix||o.sku))||(o.skuFix||o.sku);}
 function skuKho(s){ if(!s) return s; if(P(s)) return s; if(s.indexOf('L-')===0 && P(s.slice(2))) return s.slice(2); return s; }
@@ -7580,6 +7581,7 @@ function skuHe(o){ ensureSkumap(); var s=o.skuFix||o.sku; var k=o.kenh||'';
   for(var i=0;i<DATA.skumap.rules.length;i++){var r=DATA.skumap.rules[i];
     if((!r.kenh||r.kenh==='Tất cả'||r.kenh===k)&&matchPat(r.pat,s))
       return {code:r.sys,name:r.name||nm(r.sys)||r.sys,isBase:(r.type==='son1kg'||r.type==='mini'),sonType:r.type||'',matched:'quytac'};}
+  for(var j=0;j<DATA.skumap.rules.length;j++){var rb=DATA.skumap.rules[j];if(rb.sys===s&&(rb.type==='son1kg'||rb.type==='mini'))return {code:s,name:nm(s)||rb.name||s,isBase:true,sonType:rb.type,matched:'sysbase'};}   // FIX: nhap thang SKU he thong base (vd SM-V01-BP) -> nhan dien la son base chiet, khong no combo
   var kk=skuKho(s); return {code:kk,name:nm(kk)||'',isBase:false,sonType:'',matched:(kk!==s?'L-':'none')};
 }
 function idxOf(madon){var a=[];DATA.orders.forEach((o,i)=>{if(o.madon===madon)a.push(i);});return a;}
@@ -7883,7 +7885,7 @@ function rXKBanHang(){
     <select id="xkTThd" onchange="xkApply()"><option value="">Đơn 訂單: tất cả</option><option value="cho" ${xkF.tthd==='cho'?'selected':''}>Chờ lấy hàng 待取貨</option><option value="giao" ${xkF.tthd==='giao'?'selected':''}>Đã có ĐVVC 已有快遞</option><option value="huy" ${xkF.tthd==='huy'?'selected':''}>Đã hủy 已取消</option></select>
     ${xkBHSub==='keo'?`<select id="xkTTX" onchange="xkApply()"><option value="">Xuất: tất cả</option><option value="Chua xuat" ${xkF.ttx==='Chua xuat'?'selected':''}>Chưa xuất</option><option value="Da xuat" ${xkF.ttx==='Da xuat'?'selected':''}>Đã xuất</option></select>`:''}
     ${xkBHSub==='xuat'?`<select id="xkMau" onchange="xkApply()">${opt(maus,xkF.mau,'🎨 Màu sơn 顏色: tất cả')}</select>`:''}
-    <input id="xkFind" placeholder="Tìm mã đơn / SKU / sản phẩm · 搜尋" value="${xkF.find}" oninput="xkApply()" style="flex:1;min-width:160px">
+    <input id="xkFind" placeholder="Tìm mã đơn / SKU / sản phẩm · 搜尋" value="${xkF.find}" oninput="xkApply()" style="flex:1;min-width:160px"><button class="btn" onclick="xkClearFilter()" title="Xóa tất cả bộ lọc, về mặc định hôm nay">✗ Xóa lọc</button>${xkBHSub==='xuat'?`<button class="btn ${xkChietReqOnly?'pri':''}" onclick="xkChietReqOnly=!xkChietReqOnly;xkDraw()" title="Chỉ hiện đơn chiết màu theo yêu cầu">🎨 Chỉ chiết màu</button>`:''}
   </div>
   ${xkBHSub==='xuat'?dotChips():''}
   <div class="bar" style="margin-top:-4px">
@@ -7919,6 +7921,7 @@ function dotChips(){
 function toggleDot(d){xkDotSet[d]=!xkDotSet[d];if(!xkDotSet[d])delete xkDotSet[d];rXKBanHang();}
 function dotPass(o){var keys=Object.keys(xkDotSet);return keys.length===0||xkDotSet[o.dot];}
 function xkApply(){xkF.kenh=v('xkKenh');xkF.thang=v('xkThang');xkF.tuNgay=v('xkTu');xkF.denNgay=v('xkDen');xkF.dvvc=v('xkDvvc');xkF.tthd=v('xkTThd');xkF.ttx=v('xkTTX');xkF.mau=v('xkMau');xkF.find=v('xkFind');xkDraw();}
+function xkClearFilter(){xkF={kenh:'',thang:'',ngay:'',tuNgay:'',denNgay:'',dvvc:'',ttx:'',tthd:'',mau:'',find:''};xkDotSet={};rXKBanHang();}   // FIX: nut Xoa loc -> ve mac dinh (khong loc -> dot hom nay)
 function v(id){var e=el(id);return e?e.value:'';}
 function xkDraw(){
   if(xkBHSub==='keo'){ el('xkTbl').innerHTML=tblKeo(); xkSyncAllCb(); }
@@ -7946,7 +7949,7 @@ function xkFilter(){
   var q=(xkF.find||'').toLowerCase();var nd=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');
   return DATA.orders.map((o,i)=>({o,i})).filter(({o})=>
     (!xkF.kenh||o.kenh===xkF.kenh)&&(!xkF.thang||o.ngay.slice(0,7)===xkF.thang)&&(!xkF.tuNgay||o.ngay>=xkF.tuNgay)&&(!xkF.denNgay||o.ngay<=xkF.denNgay)&&
-    (!xkF.dvvc||o.dvvc===xkF.dvvc)&&(!xkF.tthd||(o.tthd||'giao')===xkF.tthd)&&(!xkF.ttx||o.tt===xkF.ttx)&&(!xkF.mau||o.mau===xkF.mau)&&
+    (!xkF.dvvc||o.dvvc===xkF.dvvc)&&(!xkF.tthd||(o.tthd||'giao')===xkF.tthd)&&(!xkF.ttx||o.tt===xkF.ttx)&&(!xkF.mau||o.mau===xkF.mau)&&(!xkChietReqOnly||isChietReq(o))&&
     (!q||nd((o.madon+' '+o.sku+' '+tenSan(o)+' '+nm(skuKho(o.sku))).toLowerCase()).indexOf(nd(q))>=0));
 }
 function tblKeo(){
@@ -7979,18 +7982,18 @@ function tblXuat(){
   var cnt={},maOf={},seen={};
   ordList.forEach(o=>{var ngd=ymd_(o.ngay);cnt[ngd]=(cnt[ngd]||0)+1;maOf[o.madon]='XKBH'+ngd+'-'+cnt[ngd];});
   var disp=rows.slice().sort((A,B)=>(B.o.ngay+(B.o.dot||'')).localeCompare(A.o.ngay+(A.o.dot||'')));
-  disp.forEach(({o})=>{var ma=maOf[o.madon];var first=!seen[o.madon];seen[o.madon]=1;var giftRows=first?giftFor(o):[];var tienCell=first?tienFmt(o.tien):'';
+  disp.forEach(({o,i})=>{var ma=maOf[o.madon];var first=!seen[o.madon];seen[o.madon]=1;var giftRows=first?giftFor(o):[];var tienCell=first?tienFmt(o.tien):'';
     var huyFlag=(o.tthd==='huy'&&first)?` <span class="tag t-red">⚠ HỦY sau xuất</span> <button class="btn pri" style="padding:1px 8px;font-size:11px;vertical-align:middle" onclick="hhThuHoi('${o.madon}')">↩ Thu hồi ngay</button>`:'';
     var he=skuHe(o);
     if(he.isBase){
-      h+=`<tr ${o.tthd==='huy'?'style="background:#fff0f0"':''}><td class="mono">${ma}</td><td>${ngayGio(o)}</td><td class="mono">${o.madon}</td><td>${dvvcTag(o.dvvc)}</td><td>${o.kenh}</td><td class="mono">${o.vd||'—'}</td><td class="mono">${he.code}</td><td>${he.name} <span class="tag t-warn" style="font-size:9px">chiết màu</span>${huyFlag}</td><td><b style="color:#9a6a00">${o.mau||''}</b></td><td class="r">${tienCell}</td><td class="r">${o.sl}</td><td>${o.qua?'Quà':''}</td><td class="sub">${dotLabel(o)}</td></tr>`;
+      h+=`<tr ${o.tthd==='huy'?'style="background:#fff0f0"':''}><td class="mono">${ma}</td><td>${ngayGio(o)}</td><td class="mono">${o.madon}</td><td>${dvvcTag(o.dvvc)}</td><td>${o.kenh}</td><td class="mono">${o.vd||'—'}</td><td class="mono">${he.code}</td><td>${he.name} <span class="tag t-warn" style="font-size:9px">chiết màu</span>${huyFlag}</td><td><b style="color:#9a6a00">${o.mau||''}</b></td><td class="r">${tienCell}</td><td class="r">${o.sl}</td><td>${o.qua?'Quà':''}</td><td class="sub">${isChietReq(o)?'<span class="tag t-warn" style="font-size:9px">🎨 chiết</span> ':''}${dotLabel(o)} <button class="btn" style="padding:0 6px" title="Sửa đơn này" onclick="xkEditLine(${i})">✏️</button></td></tr>`;
       giftRows.forEach(gr=>{h+=giftRowHtml(gr,ma,o);});return;
     }
     var k=he.code;var lines=explode(k,o.sl);var isC=lines.length>1||lines[0].child;
-    if(isC){h+=`<tr style="background:#fafbfd"><td class="mono">${ma}</td><td>${ngayGio(o)}</td><td class="mono">${o.madon}</td><td>${dvvcTag(o.dvvc)}</td><td>${o.kenh}</td><td class="mono">${o.vd||'—'}</td><td class="mono">${k}</td><td>${nm(k)} <span class="tag t-info">nổ ${lines.length} SP</span></td><td></td><td class="r">${tienCell}</td><td class="r">${o.sl}</td><td>${o.qua?'Quà':''}</td><td class="sub">${dotLabel(o)}</td></tr>`;
+    if(isC){h+=`<tr style="background:#fafbfd"><td class="mono">${ma}</td><td>${ngayGio(o)}</td><td class="mono">${o.madon}</td><td>${dvvcTag(o.dvvc)}</td><td>${o.kenh}</td><td class="mono">${o.vd||'—'}</td><td class="mono">${k}</td><td>${nm(k)} <span class="tag t-info">nổ ${lines.length} SP</span></td><td></td><td class="r">${tienCell}</td><td class="r">${o.sl}</td><td>${o.qua?'Quà':''}</td><td class="sub">${isChietReq(o)?'<span class="tag t-warn" style="font-size:9px">🎨 chiết</span> ':''}${dotLabel(o)} <button class="btn" style="padding:0 6px" title="Sửa đơn này" onclick="xkEditLine(${i})">✏️</button></td></tr>`;
       lines.forEach(c=>h+=`<tr class="child"><td></td><td></td><td></td><td></td><td></td><td></td><td class="mono">↳ ${c.code}</td><td>${nm(c.code)}</td><td></td><td></td><td class="r">${c.qty}</td><td></td><td></td></tr>`);
       giftRows.forEach(gr=>{h+=giftRowHtml(gr,ma,o);});
-    } else {h+=`<tr ${o.tthd==='huy'?'style="background:#fff0f0"':''}><td class="mono">${ma}</td><td>${ngayGio(o)}</td><td class="mono">${o.madon}</td><td>${dvvcTag(o.dvvc)}</td><td>${o.kenh}</td><td class="mono">${o.vd||'—'}</td><td class="mono">${k}</td><td>${nm(k)}${huyFlag}</td><td><b style="color:#9a6a00">${o.mau||''}</b></td><td class="r">${tienCell}</td><td class="r">${o.sl}</td><td>${o.qua?'Quà':''}</td><td class="sub">${dotLabel(o)}</td></tr>`;giftRows.forEach(gr=>{h+=giftRowHtml(gr,ma,o);});}
+    } else {h+=`<tr ${o.tthd==='huy'?'style="background:#fff0f0"':''}><td class="mono">${ma}</td><td>${ngayGio(o)}</td><td class="mono">${o.madon}</td><td>${dvvcTag(o.dvvc)}</td><td>${o.kenh}</td><td class="mono">${o.vd||'—'}</td><td class="mono">${k}</td><td>${nm(k)}${huyFlag}</td><td><b style="color:#9a6a00">${o.mau||''}</b></td><td class="r">${tienCell}</td><td class="r">${o.sl}</td><td>${o.qua?'Quà':''}</td><td class="sub">${isChietReq(o)?'<span class="tag t-warn" style="font-size:9px">🎨 chiết</span> ':''}${dotLabel(o)} <button class="btn" style="padding:0 6px" title="Sửa đơn này" onclick="xkEditLine(${i})">✏️</button></td></tr>`;giftRows.forEach(gr=>{h+=giftRowHtml(gr,ma,o);});}
   });
   return h+'</table>';
 }
@@ -8035,6 +8038,39 @@ function suaSku(i){var o=DATA.orders[i];if(!o)return;
   if(!v){delete o.skuFix;delete o.skuFixLog;}
   else{o.skuFix=v;o.skuFixLog=(o.skuFixLog||[]);o.skuFixLog.push({tu:cur,den:v,luc:new Date().toISOString()});}
   save();xkDraw();
+}
+/* ===== SỬA ĐƠN đầy đủ (màu, SKU, ĐVVC, mã vận đơn, số lượng) — có nhật ký người sửa ===== */
+function xkEditLine(i){var o=DATA.orders[i];if(!o)return;
+  var carriers=uniq(DATA.orders.map(function(x){return x.dvvc;}).filter(Boolean)).sort();
+  var dl=carriers.map(function(c){return '<option value="'+(c||'').replace(/"/g,'&quot;')+'">';}).join('');
+  var prodDL=DATA.products.slice(0,3000).map(function(p){return '<option value="'+p.code+'">'+(p.vi||'').replace(/"/g,'')+'</option>';}).join('');
+  var esc=function(s){return (s==null?'':String(s)).replace(/"/g,'&quot;');};
+  modal('<div style="padding:14px 18px;border-bottom:1px solid var(--line);font-weight:700">✏️ Sửa đơn '+o.madon+' <span class="sub">· dòng SKU gốc: '+o.sku+'</span></div>'+
+  '<div style="padding:16px 18px;display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+    '<label class="sub">Đơn vị VC (áp cả đơn):<input id="edDvvc" list="edCarrierDL" value="'+esc(o.dvvc)+'" style="width:100%"></label>'+
+    '<label class="sub">Mã vận đơn (áp cả đơn):<input id="edVd" value="'+esc(o.vd)+'" style="width:100%"></label>'+
+    '<label class="sub" style="grid-column:1/3">SKU đúng — để trống = SKU gốc (<b>'+o.sku+'</b>). Nhập SKU sàn (vd L-SM-0810-01D) hoặc SKU hệ thống:<input id="edSku" list="edProdDL" value="'+esc(o.skuFix)+'" placeholder="'+esc(o.sku)+'" style="width:100%"></label>'+
+    '<label class="sub">Màu:<input id="edMau" value="'+esc(o.mau)+'" style="width:100%"></label>'+
+    '<label class="sub">Số lượng:<input id="edSl" type="number" min="0" value="'+(o.sl!=null?o.sl:'')+'" style="width:100%"></label>'+
+    '<label class="sub" style="grid-column:1/3"><input type="checkbox" id="edReady" '+(o.tthd==='giao'?'checked':'')+'> Đã có ĐVVC — sẵn sàng xuất (dùng cho đơn đang chờ điều chuyển)</label>'+
+    '<label class="sub" style="grid-column:1/3">Người sửa (ghi nhật ký):<input id="edBy" placeholder="Tên bạn" style="width:100%"></label>'+
+  '</div><datalist id="edCarrierDL">'+dl+'</datalist><datalist id="edProdDL">'+prodDL+'</datalist>'+
+  '<div class="note" style="margin:0 14px">ĐVVC & Mã vận đơn áp cho CẢ đơn; SKU/Màu/Số lượng áp cho DÒNG này. Đổi SKU/Số lượng sẽ cập nhật tồn. Mọi thay đổi được ghi nhật ký.</div>'+
+  '<div style="padding:12px 18px;border-top:1px solid var(--line);text-align:right"><button class="btn" onclick="closeModal()">Hủy</button> <button class="btn pri" onclick="xkEditSave('+i+')">💾 Lưu</button></div>');
+}
+function xkEditSave(i){var o=DATA.orders[i];if(!o)return;
+  var dvvc=(v('edDvvc')||'').trim(),vd=(v('edVd')||'').trim(),sku=(v('edSku')||'').trim(),mau=(v('edMau')||'').trim(),sl=Number(v('edSl')),ready=el('edReady')&&el('edReady').checked,by=(v('edBy')||'').trim();
+  var now=Date.now();var ch=[];
+  function setOrder(field,val){DATA.orders.forEach(function(x){if(x.madon===o.madon&&String(x[field]||'')!==String(val||'')){x[field]=val;x._ts=now;}});}
+  if((o.dvvc||'')!==dvvc){ch.push('ĐVVC: '+(o.dvvc||'∅')+' → '+(dvvc||'∅'));setOrder('dvvc',dvvc);}
+  if((o.vd||'')!==vd){ch.push('Mã vận đơn: '+(o.vd||'∅')+' → '+(vd||'∅'));setOrder('vd',vd);}
+  if(ready && o.tthd!=='giao' && o.tthd!=='huy'){ch.push('Trạng thái → Đã có ĐVVC (sẵn sàng xuất)');DATA.orders.forEach(function(x){if(x.madon===o.madon){x.tthd='giao';x._ts=now;}});}
+  if((o.skuFix||'')!==sku){var cur=o.skuFix||o.sku;ch.push('SKU: '+cur+' → '+(sku||o.sku));if(!sku)delete o.skuFix;else o.skuFix=sku;o._ts=now;}
+  if((o.mau||'')!==mau){ch.push('Màu: '+(o.mau||'∅')+' → '+(mau||'∅'));o.mau=mau;o._ts=now;}
+  if(!isNaN(sl)&&sl!==(+o.sl)){ch.push('Số lượng: '+o.sl+' → '+sl);o.sl=sl;o._ts=now;}
+  if(!ch.length){closeModal();return;}
+  o._editLog=(o._editLog||[]);o._editLog.push({luc:new Date().toISOString(),by:by,sku:o.sku,changes:ch});
+  save();closeModal();if(typeof xkDraw==='function')xkDraw();else rXKBanHang();
 }
 function xkSelAll(val){ if(!val){xkSel={};} else { ordsFiltered().forEach(g=>{if(g.o.tt!=='Da xuat'&&g.o.tthd==='giao')xkSel[g.madon]=true;}); } xkDraw(); }
 function xkClearSel(){xkSel={};xkDraw();}
