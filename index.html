@@ -6869,13 +6869,39 @@ function syncTables(){
   return T;
 }
 function syncSchedule(){ if(!SYNC.on||!SYNC.url)return; clearTimeout(SYNC.timer); if(SYNC.status!=='saving')syncBadge('pending'); SYNC.timer=setTimeout(function(){syncPush();},1500); }
+// ===== B1c: dong bo AN TOAN — gan dau thoi gian record da doi + danh sach xoa (xoa mem) =====
+function _noMetaC(r){var o={};for(var k in r){if(k!=='_ts'&&k!=='_del')o[k]=r[k];}return o;}
+var SYNC_MK={
+  orders:function(r){return 'o:'+r.madon+'|'+r.sku;},
+  nx:function(r){return (r.ma!=null&&r.ma!=='')?('nx:'+r.ma):('nxj:'+JSON.stringify(_noMetaC(r)));},
+  sonLe:function(r){return (r.id!=null&&r.id!=='')?('sl:'+r.id):('slj:'+JSON.stringify(_noMetaC(r)));},
+  xnb:function(r){return (r.id!=null&&r.id!=='')?('xnb:'+r.id):('xnbj:'+JSON.stringify(_noMetaC(r)));},
+  xhd:function(r){return (r.id!=null&&r.id!=='')?('xhd:'+r.id):('xhdj:'+JSON.stringify(_noMetaC(r)));},
+  products:function(r){return 'p:'+r.code;},
+  ton:function(r){return 't:'+r.code;}
+};
+var SYNC_COLLS=['orders','nx','sonLe','xnb','xhd','products','ton'];
+function _hashId(s){var h=0;for(var i=0;i<s.length;i++){h=((h<<5)-h+s.charCodeAt(i))|0;}return 'AUTO'+(h>>>0).toString(36);}
+function ensureRecIds(){ ['xnb','xhd'].forEach(function(c){ (DATA[c]||[]).forEach(function(r){ if(r.id==null||r.id===''){ r.id=_hashId(c+'|'+JSON.stringify(_noMetaC(r))); } }); }); }
+function syncSetBase(){ try{ SYNC.base=JSON.parse(JSON.stringify(DATA)); }catch(e){ SYNC.base={}; } }
 function syncPush(cb){ if(!SYNC.url){cb&&cb(false);return;} SYNC.busy=true; syncBadge('saving');
-  var payload; try{payload=JSON.stringify({state:JSON.stringify(DATA),tables:syncTables()});}catch(e){SYNC.busy=false;syncBadge('err');cb&&cb(false);return;}
-  fetch(SYNC.url,{method:'POST',body:payload}).then(function(r){return r.json();}).then(function(j){SYNC.busy=false;if(j&&j.ok){SYNC.last=j.ts||'';syncBadge('ok');cb&&cb(true);}else{syncBadge('err');cb&&cb(false);}}).catch(function(e){SYNC.busy=false;syncBadge('err');cb&&cb(false);});
+  ensureRecIds();
+  var base=SYNC.base||{}, now=Date.now(), deletes={};
+  SYNC_COLLS.forEach(function(coll){
+    var kf=SYNC_MK[coll], bmap={}, cmap={};
+    (base[coll]||[]).forEach(function(r){ bmap[kf(r)]=r; });
+    (DATA[coll]||[]).forEach(function(r){ var k=kf(r); cmap[k]=1; var b=bmap[k];
+      var changed = !b || JSON.stringify(_noMetaC(r))!==JSON.stringify(_noMetaC(b));
+      if(changed) r._ts=now; else if(r._ts==null) r._ts=(b&&b._ts)||0; });
+    var del=[]; Object.keys(bmap).forEach(function(k){ if(!cmap[k]) del.push(k); });
+    if(del.length) deletes[coll]=del;
+  });
+  var payload; try{payload=JSON.stringify({state:JSON.stringify(DATA),tables:syncTables(),deletes:deletes,delTs:now});}catch(e){SYNC.busy=false;syncBadge('err');cb&&cb(false);return;}
+  fetch(SYNC.url,{method:'POST',body:payload}).then(function(r){return r.json();}).then(function(j){SYNC.busy=false;if(j&&j.ok){SYNC.last=j.ts||'';syncSetBase();syncBadge('ok');cb&&cb(true);}else{syncBadge('err');cb&&cb(false);}}).catch(function(e){SYNC.busy=false;syncBadge('err');cb&&cb(false);});
 }
 function syncPull(cb){ if(!SYNC.url){cb&&cb(false);return;} syncBadge('loading');
   fetch(SYNC.url+(SYNC.url.indexOf('?')>=0?'&':'?')+'action=load').then(function(r){return r.json();}).then(function(j){
-    if(j&&j.ok&&j.state){ try{var d=JSON.parse(j.state); if(d&&typeof d==='object'&&Object.keys(d).length){ Object.keys(DATA).forEach(function(k){delete DATA[k];}); Object.assign(DATA,d); try{normalizeCombos();}catch(e){} try{localStorage.setItem('loho-kho',JSON.stringify(DATA));}catch(e){} _dataVer++; SYNC.last=j.ts||''; syncBadge('ok'); cb&&cb(true); return; } }catch(e){} }
+    if(j&&j.ok&&j.state){ try{var d=JSON.parse(j.state); if(d&&typeof d==='object'&&Object.keys(d).length){ SYNC_COLLS.forEach(function(coll){ if(Array.isArray(d[coll])) d[coll]=d[coll].filter(function(r){return !r._del;}); }); Object.keys(DATA).forEach(function(k){delete DATA[k];}); Object.assign(DATA,d); try{normalizeCombos();}catch(e){} try{localStorage.setItem('loho-kho',JSON.stringify(DATA));}catch(e){} _dataVer++; SYNC.last=j.ts||''; syncSetBase(); syncBadge('ok'); cb&&cb(true); return; } }catch(e){} }
     syncBadge(SYNC.on?'ok':'off'); cb&&cb(false);
   }).catch(function(e){syncBadge('err');cb&&cb(false);});
 }
@@ -6902,7 +6928,9 @@ function syncCfgSave(){ SYNC.url=(el('syncUrlIn').value||'').trim(); SYNC.on=el(
 function syncTest(){ var u=(el('syncUrlIn').value||'').trim(); if(!u){el('syncMsg').textContent='Chưa nhập link.';return;} el('syncMsg').textContent='Đang test…'; fetch(u+(u.indexOf('?')>=0?'&':'?')+'action=ping').then(function(r){return r.json();}).then(function(j){el('syncMsg').innerHTML=(j&&j.ok)?'<span style="color:#1e8e4e">✓ Kết nối OK · '+(j.ts||'')+'</span>':'<span style="color:#c0392b">✗ Phản hồi không hợp lệ</span>';}).catch(function(e){el('syncMsg').innerHTML='<span style="color:#c0392b">✗ Lỗi: '+e+' (kiểm tra link & quyền Anyone)</span>';}); }
 function syncBackupNow(){ SYNC.url=(el('syncUrlIn').value||'').trim(); SYNC.on=el('syncOnIn').checked; if(!SYNC.url){el('syncMsg').textContent='Chưa nhập link.';return;} syncSaveCfg(); el('syncMsg').textContent='Đang sao lưu…'; syncPush(function(ok){el('syncMsg').innerHTML=ok?'<span style="color:#1e8e4e">✓ Đã sao lưu lên Google Sheets</span>':'<span style="color:#c0392b">✗ Sao lưu lỗi (kiểm tra link & quyền)</span>';}); }
 function syncRestoreNow(){ var u=(el('syncUrlIn').value||'').trim(); if(!u){el('syncMsg').textContent='Chưa nhập link.';return;} if(!confirm('Tải dữ liệu từ Google Sheets về và GHI ĐÈ dữ liệu trên máy này?'))return; SYNC.url=u; syncSaveCfg(); el('syncMsg').textContent='Đang tải…'; syncPull(function(ok){el('syncMsg').innerHTML=ok?'<span style="color:#1e8e4e">✓ Đã tải về. Đang làm mới…</span>':'<span style="color:#c0392b">✗ Chưa có dữ liệu trên Sheets / lỗi tải</span>';if(ok)refreshAllPanels();}); }
-function exportXLSX(tableId,name){var t=el(tableId);if(!t){alert('Không có bảng');return;}var wb=XLSX.utils.table_to_book(t,{sheet:name});XLSX.writeFile(wb,name+' '+new Date().toISOString().slice(0,10)+'.xlsx');}
+function exportXLSX(tableId,name){var t=el(tableId);if(!t){alert('Không có bảng');return;}
+  try{var cs=t.querySelectorAll('td,th');for(var i=0;i<cs.length;i++){var tx=(cs[i].textContent||'').trim();if(/^\d{12,}$/.test(tx)){cs[i].setAttribute('data-t','s');cs[i].setAttribute('data-v',tx);}}}catch(e){}  // FIX: ma dai -> kieu CHU, khong mat so cuoi
+  var wb=XLSX.utils.table_to_book(t,{sheet:name});XLSX.writeFile(wb,name+' '+new Date().toISOString().slice(0,10)+'.xlsx');}
 
 /* ============ TABS ============ */
 const TABS=[
@@ -7613,7 +7641,7 @@ function xnbForm(i){ ensureXK2();
    </div>
    <div class="bar" style="padding:12px 18px;border-top:1px solid var(--line)"><button class="btn pri" onclick="xnbSave(${i})">💾 Lưu</button><button class="btn" onclick="closeModal()">Hủy</button></div>${sysDatalist()}`);
 }
-function xnbSave(i){var r={ngay:el('nbNgay').value,bp:el('nbBp').value,sku:(el('nbSku').value||'').split('—')[0].trim(),sl:Number(el('nbSl').value)||1,loai:el('nbLoai').value,ghichu:el('nbGc').value,nguoi:el('nbNguoi').value};if(!r.sku){alert('Chọn SKU.');return;}if(i>=0)DATA.xnb[i]=r;else DATA.xnb.push(r);save();closeModal();rNoiBo();}
+function xnbSave(i){var r={ngay:el('nbNgay').value,bp:el('nbBp').value,sku:(el('nbSku').value||'').split('—')[0].trim(),sl:Number(el('nbSl').value)||1,loai:el('nbLoai').value,ghichu:el('nbGc').value,nguoi:el('nbNguoi').value};if(!r.sku){alert('Chọn SKU.');return;}r.id=(i>=0&&DATA.xnb[i]&&DATA.xnb[i].id)?DATA.xnb[i].id:('XNB'+Date.now()+Math.floor(Math.random()*1000));if(i>=0)DATA.xnb[i]=r;else DATA.xnb.push(r);save();closeModal();rNoiBo();}
 /* ===== Xuất kho HOẠT ĐỘNG ===== */
 let xhdF={thang:'',ngay:'',nguoi:''};
 function xhdApply(){xhdF.thang=v('xhdThang');xhdF.ngay=v('xhdNgay');xhdF.nguoi=v('xhdNguoi');rHoatDong();}
@@ -7648,7 +7676,7 @@ function xhdForm(i){ ensureXK2();
    </div>
    <div class="bar" style="padding:12px 18px;border-top:1px solid var(--line)"><button class="btn pri" onclick="xhdSave(${i})">💾 Lưu</button><button class="btn" onclick="closeModal()">Hủy</button></div>${sysDatalist()}`);
 }
-function xhdSave(i){var r={ngay:el('hdNgay').value,loai:el('hdLoai').value,ct:el('hdCt').value,kenh:el('hdKenh').value,sku:(el('hdSku').value||'').split('—')[0].trim(),sl:Number(el('hdSl').value)||1,nguoi:el('hdNguoi').value};if(!r.sku){alert('Chọn SKU.');return;}if(i>=0)DATA.xhd[i]=r;else DATA.xhd.push(r);save();closeModal();rHoatDong();}
+function xhdSave(i){var r={ngay:el('hdNgay').value,loai:el('hdLoai').value,ct:el('hdCt').value,kenh:el('hdKenh').value,sku:(el('hdSku').value||'').split('—')[0].trim(),sl:Number(el('hdSl').value)||1,nguoi:el('hdNguoi').value};if(!r.sku){alert('Chọn SKU.');return;}r.id=(i>=0&&DATA.xhd[i]&&DATA.xhd[i].id)?DATA.xhd[i].id:('XHD'+Date.now()+Math.floor(Math.random()*1000));if(i>=0)DATA.xhd[i]=r;else DATA.xhd.push(r);save();closeModal();rHoatDong();}
 /* ===== Xuất kho QUÀ TẶNG (tổng hợp từ ④ Bán hàng) ===== */
 let qtF={thang:'',ngay:'',nguon:'',ct:'',find:''};
 function qtApply(){qtF.thang=v('qtThang');qtF.ngay=v('qtNgay');qtF.nguon=v('qtNguon');qtF.ct=v('qtCt');qtF.find=v('qtFind');rQuaTangXuat();}
@@ -8304,7 +8332,7 @@ function rKiemkho(){ ensureKK();
   if(kkSub==='chot')rKKChot();else if(kkSub==='ban')rKKBan();else if(kkSub==='dong')rKKDong();else rKKTuan();
 }
 function rKKChot(){ ensureKK();var snapped=Object.keys(DATA.kk.snap).length>0;
-  var body=`<div class="bar"><label class="sub">Ngày chốt kho:</label><input type="date" id="kkDate" value="${DATA.kk.ngayChot||'2026-06-25'}"><button class="btn pri" onclick="kkChot()">📷 Chốt kiểm kho (snapshot tồn lý thuyết)</button>${snapped?'<span class="tag t-ok">Đã chốt: '+DATA.kk.ngayChot+'</span>':''}<div class="sp"></div>${snapped?`<button class="btn gr" onclick="exportXLSX('tblKKsnap','Chot kiem kho')">⬇ Excel 匯出</button>`:''}</div>`;
+  var body=`<div class="bar"><label class="sub">Ngày chốt kho:</label><input type="date" id="kkDate" value="${DATA.kk.ngayChot||'2026-06-25'}"><button class="btn pri" onclick="kkChot()">📷 Chốt kiểm kho (snapshot tồn lý thuyết)</button>${snapped?'<span class="tag t-ok">Đã chốt: '+DATA.kk.ngayChot+'</span>':''}<button class="btn" style="color:var(--red)" onclick="kkResetKy()">🗑 Làm mới kỳ (xóa kỳ test)</button><div class="sp"></div>${snapped?`<button class="btn gr" onclick="exportXLSX('tblKKsnap','Chot kiem kho')">⬇ Excel 匯出</button>`:''}</div>`;
   if(!snapped)body+=`<div class="note">Chọn <b>ngày chốt</b> rồi bấm <b>Chốt kiểm kho</b>: hệ thống chụp số tồn hiện tại làm <b>Tồn lý thuyết</b> cho bản kiểm kho. Bước này KHÔNG hiện tồn thực tế / chênh lệch (xử lý ở tab ②).</div>`;
   else{var rows=Object.keys(DATA.kk.snap).map(c=>`<tr><td class="mono">${c}</td><td>${nm(c)}</td><td>${(P(c)&&P(c).type==='NVL')?'Nguyên liệu':'Thành phẩm'}</td><td class="r">${num(DATA.kk.snap[c])}</td></tr>`).join('');
     body+=`<div class="card scroll"><table id="tblKKsnap"><tr><th>SKU</th><th>Tên SP</th><th>Phân loại</th><th class="r">Tồn lý thuyết</th></tr>${rows}</table></div><div class="note">Đã chốt tồn lý thuyết ngày <b>${DATA.kk.ngayChot}</b> (${Object.keys(DATA.kk.snap).length} mã). Sang tab ② để nhân viên kiểm kê.</div>`;}
@@ -8314,6 +8342,14 @@ function kkChot(){ ensureKK();var d=el('kkDate').value;if(!d){alert('Chọn ngà
   DATA.kk.ngayChot=d;var T=computeTon();DATA.kk.snap={};
   DATA.products.forEach(p=>{if(p.combo)return;var r=T[p.code];DATA.kk.snap[p.code]=r?(r.dk+r.moi-(r.nb+r.hd+r.bh+r.qt+r.sx)):0;});
   save();rKiemkho();
+}
+function kkResetKy(){ ensureKK();
+  var cur=DATA.kk.ngayChot||'(chưa chốt)';
+  if(!confirm('LÀM MỚI kỳ kiểm kho hiện tại?\nNgày chốt hiện tại: '+cur+'\n\n• Xóa toàn bộ số liệu kiểm kê của kỳ này (tồn lý thuyết đã chốt, số đếm NV1/2/3, xác nhận, lệnh).\n• KHÔNG ảnh hưởng tồn kho, đơn hàng, hay các kỳ đã đóng.'))return;
+  var m=amKK();
+  DATA.kk={ngayChot:'',snap:{},kk1:{},kk2:{},kk3:{},thuc:{},hide:{},p1:{},p2:{},p3:{},done:{},sel:{},lenh:'',confirmed:false};
+  if(m && DATA.kkHistory && DATA.kkHistory[m] && confirm('Có 1 kỳ ĐÃ ĐÓNG tháng '+m+' trong lịch sử.\nXóa luôn kỳ đã đóng này? (nếu đây cũng là kỳ test)'))delete DATA.kkHistory[m];
+  save(); rKiemkho();
 }
 function kkFinal(c){var k1=DATA.kk.kk1[c],k2=DATA.kk.kk2[c],k3=DATA.kk.kk3[c];
   var n1=(k1!=null&&k1!=='')?Number(k1):null,n2=(k2!=null&&k2!=='')?Number(k2):null,n3=(k3!=null&&k3!=='')?Number(k3):null;
@@ -8363,7 +8399,7 @@ function rKKBan(){ ensureKK();var am=amKK();
       `<td class="r" id="kkdiff_${c}">${lt2===''?'<span class="sub">—</span>':('<b style="color:'+(lt2<0?'var(--red)':(lt2>0?'var(--green)':'var(--muted)'))+'">'+(lt2>0?'+':'')+num(lt2)+'</b>')}</td>`+
       `<td style="text-align:center" id="kkdn_${c}"><button class="btn" style="padding:1px 7px;${dn?'color:var(--green);font-weight:700':''}" title="Xác nhận hoàn tất dòng này" onclick="kkToggleDone('${c}')">${dn?'✓':'○'}</button></td>`+
       `<td>${hid?`<button class="btn" style="padding:1px 7px" title="Hiện lại" onclick="kkUnhide('${c}')">↩</button>`:`<button class="btn" style="padding:1px 7px;color:var(--red)" title="Ẩn khỏi bản kiểm" onclick="kkHide('${c}')">🚫</button>`}</td></tr>`;});
-  var nSel=Object.keys(DATA.kk.sel).filter(c=>DATA.kk.sel[c]).length;
+  var nSel=prods.filter(p=>DATA.kk.sel[p.code]).length;   // FIX: dem mã đã chọn ĐANG HIỂN THỊ (theo bộ lọc), khong dinh danh muc khac
   var lenhBanner=DATA.kk.lenh?`<div class="note" style="background:#e8f7ee;border-color:#9fd9b4"><b>✓ Đã xác nhận — Lệnh kiểm kho: ${DATA.kk.lenh}</b>. Các mã ✓ đã sẵn sàng; sang tab ③ để đóng kỳ.</div>`:'';
   el('kkBody').innerHTML=`
    <div class="tabs2"><button class="${isN?'on':''}" onclick="kkSub2='nvl';rKiemkho()">Nguyên liệu</button><button class="${!isN?'on':''}" onclick="kkSub2='tp';rKiemkho()">Thành phẩm</button></div>
@@ -8390,8 +8426,8 @@ function kkSelAll(val){ensureKK();var isN=kkSub2==='nvl';var base=DATA.products.
   base.filter(p=>{var c=p.code;var lt=DATA.kk.snap[c]||0;return (!kkF.cat||p.ck===kkF.cat)&&(!kkF.nguoi||DATA.kk.p1[c]===kkF.nguoi||DATA.kk.p2[c]===kkF.nguoi||DATA.kk.p3[c]===kkF.nguoi)&&(!kkF.hide0||lt!==0)&&(!q||nd((p.code+' '+p.vi+' '+(p.zh||'')).toLowerCase()).indexOf(nd(q))>=0);}).forEach(p=>{if(val)DATA.kk.sel[p.code]=true;else delete DATA.kk.sel[p.code];});
   save();rKKBan();}
 function kkAddStaff(n){if(!n)return;ensureKK();if(DATA.kkStaff.indexOf(n)<0)DATA.kkStaff.push(n);}
-function kkAssignSel(){ensureKK();var p1=(v('kkNv1')||'').trim(),p2=(v('kkNv2')||'').trim(),p3=(v('kkNv3')||'').trim();var sel=Object.keys(DATA.kk.sel).filter(c=>DATA.kk.sel[c]);if(!sel.length){alert('Tick chọn mã cần gán trước.');return;}if(!p1&&!p2&&!p3){alert('Nhập tên Người kiểm 1/2/3.');return;}sel.forEach(c=>{if(p1)DATA.kk.p1[c]=p1;if(p2)DATA.kk.p2[c]=p2;if(p3)DATA.kk.p3[c]=p3;});kkAddStaff(p1);kkAddStaff(p2);kkAddStaff(p3);save();rKKBan();}
-function kkClearAssign(){ensureKK();var sel=Object.keys(DATA.kk.sel).filter(c=>DATA.kk.sel[c]);if(!sel.length){alert('Tick chọn mã cần xoá gán.');return;}if(!confirm('Xoá người gán cho '+sel.length+' mã đã chọn?'))return;sel.forEach(c=>{delete DATA.kk.p1[c];delete DATA.kk.p2[c];delete DATA.kk.p3[c];});save();rKKBan();}
+function kkAssignSel(){ensureKK();var p1=(v('kkNv1')||'').trim(),p2=(v('kkNv2')||'').trim(),p3=(v('kkNv3')||'').trim();var vis={};kkFiltered().forEach(function(p){vis[p.code]=1;});var sel=Object.keys(DATA.kk.sel).filter(c=>DATA.kk.sel[c]&&vis[c]);if(!sel.length){alert('Tick chọn mã ĐANG HIỂN THỊ (theo bộ lọc) cần gán trước.');return;}if(!p1&&!p2&&!p3){alert('Nhập tên Người kiểm 1/2/3.');return;}sel.forEach(c=>{if(p1)DATA.kk.p1[c]=p1;if(p2)DATA.kk.p2[c]=p2;if(p3)DATA.kk.p3[c]=p3;});kkAddStaff(p1);kkAddStaff(p2);kkAddStaff(p3);save();rKKBan();}
+function kkClearAssign(){ensureKK();var vis={};kkFiltered().forEach(function(p){vis[p.code]=1;});var sel=Object.keys(DATA.kk.sel).filter(c=>DATA.kk.sel[c]&&vis[c]);if(!sel.length){alert('Tick chọn mã ĐANG HIỂN THỊ cần xoá gán.');return;}if(!confirm('Xoá người gán cho '+sel.length+' mã đã chọn?'))return;sel.forEach(c=>{delete DATA.kk.p1[c];delete DATA.kk.p2[c];delete DATA.kk.p3[c];});save();rKKBan();}
 function kkStaffMgr(){ensureKK();var rows=DATA.kkStaff.map((n,i)=>`<tr><td><input value="${(n||'').replace(/"/g,'&quot;')}" onchange="DATA.kkStaff[${i}]=this.value.trim();save()" style="width:100%"></td><td><button class="btn" style="padding:1px 7px;color:var(--red)" onclick="DATA.kkStaff.splice(${i},1);save();kkStaffMgr()">🗑</button></td></tr>`).join('');
   modal(`<div style="padding:14px 18px;border-bottom:1px solid var(--line);font-weight:700">⚙ Danh sách nhân viên kiểm kho</div><div style="padding:16px 18px"><div class="bar"><input id="kkStaffNew" placeholder="Tên nhân viên" style="flex:1"><button class="btn pri" onclick="var x=(el('kkStaffNew').value||'').trim();if(x){kkAddStaff(x);save();kkStaffMgr();}">+ Thêm</button></div><div class="card scroll" style="max-height:300px;margin-top:10px"><table><tr><th>Tên</th><th></th></tr>${rows||'<tr><td colspan=2 class=sub>Chưa có</td></tr>'}</table></div></div><div style="padding:12px 18px;border-top:1px solid var(--line);text-align:right"><button class="btn pri" onclick="closeModal();rKiemkho()">Xong</button></div>`);}
 function kkSet(f,c,val){ensureKK();DATA.kk[f][c]=val;
@@ -8653,7 +8689,7 @@ try{normalizeCombos();}catch(e){}
 try{backfillGio();}catch(e){}
 buildTabs();
 rTongquan();rSanpham();rTonkho();rNhapxuat();rXuatkho();rKiemkho();rDashboard();
-syncInit();syncBadge(SYNC.on?'ok':'off');if(SYNC.on&&SYNC.url){syncPull(function(ok){if(ok){try{cleanTestData();fixThuHoiChiet();}catch(e){}}refreshAllPanels();});}syncAutoStart();
+syncInit();syncSetBase();syncBadge(SYNC.on?'ok':'off');if(SYNC.on&&SYNC.url){syncPull(function(ok){if(ok){try{cleanTestData();fixThuHoiChiet();}catch(e){}}refreshAllPanels();});}syncAutoStart();
 </script>
 <div id="gModalWrap"></div>
 </body>
