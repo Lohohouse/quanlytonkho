@@ -7487,7 +7487,7 @@ function rTonkho(){
 }
 function rTonDraw(){
   var _mw=computeTonMonth(tonMonth);var m=_mw.rows;var dauTrong=_mw.dauTrong;var _mstate=_mw.state;
-  var prods=DATA.products.filter(p=> (tonSub==='nvl' ? p.type==='NVL' : p.type==='Thành phẩm') && !p.combo && p.type!=='Combo' && !(DATA.bom&&DATA.bom[p.code]&&DATA.bom[p.code].length) );
+  var prods=DATA.products.filter(p=> (tonSub==='nvl' ? p.type==='NVL' : p.type==='Thành phẩm') && !p.combo && p.type!=='Combo' );
   ensureTonHide(); if(!tonShowHidden)prods=prods.filter(p=>!DATA.tonHide[p.code]);
   if(tonCat)prods=prods.filter(p=>p.ck===tonCat);
   var q=(tonFind||'').toLowerCase();var nd=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');
@@ -8227,76 +8227,83 @@ function inBanGiao(){
 }
 
 /* ======== ⑤ BÀN GIAO VẬN CHUYỂN / 交接 ======== */
-var bgSel={}, bgShowDone=false, bgFrom='', bgTo='';
+var bgSel={}, bgShowDone=false;
 function bgTodayISO(){return new Date().toISOString().slice(0,10);}
 function bgOrders(){var seen={},out=[];DATA.orders.forEach(function(o){if(o.tt!=='Da xuat')return;if(seen[o.madon])return;seen[o.madon]=1;out.push(o);});return out;}
 function bgSetDon(madon,val){var now=Date.now();DATA.orders.forEach(function(o){if(o.madon===madon){if(val){o._bg=val;}else{delete o._bg;}o._ts=now;}});}
-function bgApply(){bgFrom=v('bgFrom');bgTo=v('bgTo');rBanGiao();}
-function bgClear(){bgFrom='';bgTo='';bgSel={};bgShowDone=false;rBanGiao();}
 function bgToggleSel(dv){if(bgSel[dv])delete bgSel[dv];else bgSel[dv]=1;rBanGiao();}
 function bgStamp(){return bgTodayISO()+' '+new Date().toTimeString().slice(0,5);}
+function bgSelAllDvvc(){bgSel={};bgOrders().forEach(function(o){if(!o._bg)bgSel[o.dvvc||'(chưa có ĐVVC)']=1;});rBanGiao();}
 function bgMarkSel(val){
   var dvs=Object.keys(bgSel).filter(function(d){return bgSel[d];});
-  if(!dvs.length){alert('Chưa chọn ĐVVC nào (tick ô vuông ở đầu mỗi nhóm).');return;}
+  if(!dvs.length){alert('Chưa tick ĐVVC nào (ô vuông đầu mỗi hãng).');return;}
   var lab=val?bgStamp():'';var n=0;
   bgOrders().forEach(function(o){var k=o.dvvc||'(chưa có ĐVVC)';if(bgSel[k]){if(val&&!o._bg){bgSetDon(o.madon,lab);n++;}else if(!val&&o._bg){bgSetDon(o.madon,'');n++;}}});
-  save();bgSel={};rBanGiao();alert((val?'Đã đánh dấu bàn giao ':'Đã bỏ đánh dấu ')+n+' đơn.');
+  save();bgSel={};rBanGiao();alert((val?'Đã đánh dấu đã bàn giao ':'Đã bỏ đánh dấu ')+n+' đơn.');
 }
 function bgMarkOne(madon,val){bgSetDon(madon,val?bgStamp():'');save();rBanGiao();}
+function bgBaseline(){var today=bgTodayISO();
+  if(!confirm('DỌN NỀN: coi TẤT CẢ đơn đã xuất TRƯỚC hôm nay ('+today+') là ĐÃ BÀN GIAO?\n\n• Dùng 1 lần khi mới bắt đầu, để xoá các đơn cũ khỏi danh sách chờ.\n• Đơn xuất HÔM NAY giữ nguyên.\n• Không ảnh hưởng tồn kho / đơn hàng.'))return;
+  var lab='(nền cũ '+bgStamp()+')',n=0;
+  bgOrders().forEach(function(o){if(!o._bg&&(o.ngay||'').slice(0,10)<today){bgSetDon(o.madon,lab);n++;}});
+  save();alert('Đã dọn nền '+n+' đơn cũ. Từ giờ chỉ đơn chưa bàn giao mới hiện ở đây.');rBanGiao();
+}
 function rBanGiao(){
   if(!el('bgBody'))return;
   var today=bgTodayISO();
-  if(!bgTo)bgTo=today;
-  if(!bgFrom){var f=new Date(today+'T00:00:00');f.setDate(f.getDate()-6);bgFrom=f.toISOString().slice(0,10);}
   var all=bgOrders();
-  var inRange=function(o){var d=(o.ngay||'').slice(0,10);return d>=bgFrom&&d<=bgTo;};
-  var sot=all.filter(function(o){return !o._bg&&(o.ngay||'').slice(0,10)<today;});
-  var sotGrp={};sot.forEach(function(o){var k=o.dvvc||'(chưa có ĐVVC)';(sotGrp[k]=sotGrp[k]||[]).push(o);});
-  var pool=all.filter(function(o){return inRange(o)&&(bgShowDone||!o._bg);});
-  var grp={};pool.forEach(function(o){var k=o.dvvc||'(chưa có ĐVVC)';(grp[k]=grp[k]||[]).push(o);});
+  var unpicked=all.filter(function(o){return !o._bg;});
+  var picked=all.filter(function(o){return !!o._bg;});
+  var grp={};unpicked.forEach(function(o){var k=o.dvvc||'(chưa có ĐVVC)';(grp[k]=grp[k]||[]).push(o);});
   var dvs=Object.keys(grp).sort();
-  var doneTag=function(s){return '<span class="tag" style="background:#e3f5e9;color:#1e8e4e;font-weight:700">✓ '+s+'</span>';};
+  var nSotOld=unpicked.filter(function(o){return (o.ngay||'').slice(0,10)<today;}).length;
+  var nSel=Object.keys(bgSel).filter(function(d){return bgSel[d];}).length;
   var bar=`<div class="bar">
-    <span class="sub">Từ</span><input id="bgFrom" type="date" value="${bgFrom}" onchange="bgApply()" style="width:140px">
-    <span class="sub">đến</span><input id="bgTo" type="date" value="${bgTo}" onchange="bgApply()" style="width:140px">
-    <label class="sub" style="display:inline-flex;align-items:center;gap:5px"><input type="checkbox" ${bgShowDone?'checked':''} onchange="bgShowDone=this.checked;rBanGiao()"> Hiện đơn đã bàn giao</label>
-    <button class="btn" onclick="bgClear()">✗ Xóa lọc</button>
+    <b class="sub">Đơn CHƯA bàn giao: <span style="color:#b03a2e">${unpicked.length}</span>${nSotOld?` · sót ngày trước: <span style="color:var(--red)">${nSotOld}</span>`:''}${nSel?` · đang chọn ${nSel} ĐVVC`:''}</b>
     <div class="sp"></div>
-    <button class="btn pri" onclick="bgMarkSel(true)">✓ Đánh dấu đã bàn giao</button>
-    <button class="btn" onclick="bgMarkSel(false)">↺ Bỏ đánh dấu</button>
-    <button class="btn" onclick="bgPrint()">🖨 In bàn giao (gộp ĐVVC đã chọn)</button>
+    <button class="btn pri" onclick="bgPrint()">🖨 In bàn giao (ĐVVC đã chọn)</button>
+    <button class="btn" style="background:var(--green);border-color:var(--green);color:#fff" onclick="bgMarkSel(true)">✓ Đánh dấu đã bàn giao</button>
     <button class="btn gr" onclick="exportXLSX('tblBanGiao','Ban giao VC')">⬇ Excel</button>
+  </div>
+  <div class="bar" style="margin-top:-4px">
+    <button class="btn" onclick="bgSelAllDvvc()">☑ Chọn tất cả ĐVVC</button>
+    <button class="btn" onclick="bgSel={};rBanGiao()">▢ Bỏ chọn</button>
+    <label class="sub" style="display:inline-flex;align-items:center;gap:5px"><input type="checkbox" ${bgShowDone?'checked':''} onchange="bgShowDone=this.checked;rBanGiao()"> Xem đơn đã bàn giao</label>
+    <div class="sp"></div>
+    <button class="btn" style="color:var(--red)" onclick="bgBaseline()" title="Coi mọi đơn trước hôm nay là đã bàn giao (dùng 1 lần)">🧹 Dọn nền đơn cũ</button>
   </div>`;
-  var sotHtml='';var sotKeys=Object.keys(sotGrp).sort();
-  if(sotKeys.length){
-    sotHtml=`<div class="card" style="border:1px solid #f0b4b4;background:#fff6f6;margin-bottom:10px"><div style="padding:8px 10px;font-weight:700;color:var(--red)">⚠ Đơn sót — đã xuất ngày trước nhưng CHƯA bàn giao (${sot.length} đơn)</div><table style="width:100%"><tr><th>Ngày</th><th>ĐVVC</th><th>Mã đơn</th><th>Mã vận đơn</th><th>Kênh</th><th></th></tr>`;
-    sotKeys.forEach(function(k){sotGrp[k].sort(function(a,b){return (a.ngay||'').localeCompare(b.ngay||'');}).forEach(function(o){sotHtml+=`<tr><td>${(o.ngay||'').slice(0,10)}</td><td><b>${k}</b></td><td class="mono">${o.madon}</td><td class="mono">${o.vd||'—'}</td><td>${o.kenh||''}</td><td><button class="btn pri" style="padding:1px 8px" onclick="bgMarkOne('${(o.madon+'').replace(/'/g,'')}',true)">✓ Đã giao</button></td></tr>`;});});
-    sotHtml+=`</table></div>`;
-  }
-  var h=`<table id="tblBanGiao" style="width:100%"><tr><th style="width:24px"></th><th>ĐVVC / Mã đơn</th><th>Mã vận đơn</th><th>Kênh</th><th>Trạng thái bàn giao</th></tr>`;
-  if(!dvs.length)h+=`<tr><td colspan="5" class="sub" style="text-align:center;padding:14px">Không có đơn đã xuất trong khoảng ngày này.</td></tr>`;
+  var h=`<table id="tblBanGiao" style="width:100%"><tr><th style="width:24px"></th><th>ĐVVC / Mã đơn</th><th>Ngày</th><th>Mã vận đơn</th><th>Kênh</th><th></th></tr>`;
+  if(!dvs.length)h+=`<tr><td colspan="6" class="sub" style="text-align:center;padding:16px;color:var(--green)">✓ Không còn đơn nào chờ bàn giao.</td></tr>`;
   dvs.forEach(function(dv){
-    var list=grp[dv];var doneN=list.filter(function(o){return o._bg;}).length;var dvSafe=dv.replace(/'/g,'');
-    h+=`<tr style="background:#e8eef6"><td class="c"><input type="checkbox" ${bgSel[dv]?'checked':''} onchange="bgToggleSel('${dvSafe}')"></td><td><b>${dv}</b> — ${list.length} đơn ${doneN?`<span class="sub">(${doneN} đã giao)</span>`:''}</td><td></td><td></td><td></td></tr>`;
-    list.sort(function(a,b){return (a.ngay||'').localeCompare(b.ngay||'');}).forEach(function(o){
-      var ms=(o.madon+'').replace(/'/g,'');
-      h+=`<tr><td></td><td class="mono" style="padding-left:14px">${o.madon}</td><td class="mono">${o.vd||'—'}</td><td>${o.kenh||''}</td><td>${o._bg?doneTag(o._bg)+` <button class="btn" style="padding:0 6px" onclick="bgMarkOne('${ms}',false)">↺</button>`:`<span class="tag">Chờ</span> <button class="btn pri" style="padding:0 6px" onclick="bgMarkOne('${ms}',true)">✓ Đã giao</button>`}</td></tr>`;
+    var list=grp[dv].sort(function(a,b){return (a.ngay||'').localeCompare(b.ngay||'');});
+    var dvSafe=dv.replace(/'/g,'');var sotN=list.filter(function(o){return (o.ngay||'').slice(0,10)<today;}).length;
+    h+=`<tr style="background:#e8eef6"><td class="c"><input type="checkbox" ${bgSel[dv]?'checked':''} onchange="bgToggleSel('${dvSafe}')"></td><td><b>${dv}</b> — ${list.length} đơn${sotN?` <span class="tag t-red">⚠ ${sotN} sót ngày trước</span>`:''}</td><td></td><td></td><td></td><td></td></tr>`;
+    list.forEach(function(o){var ms=(o.madon+'').replace(/'/g,'');var old=(o.ngay||'').slice(0,10)<today;
+      h+=`<tr ${old?'style="background:#fff6f6"':''}><td></td><td class="mono" style="padding-left:14px">${o.madon}</td><td>${(o.ngay||'').slice(0,10)}${old?' <span class="tag t-red" style="font-size:9px">sót</span>':''}</td><td class="mono">${o.vd||'—'}</td><td>${o.kenh||''}</td><td><button class="btn pri" style="padding:0 7px" onclick="bgMarkOne('${ms}',true)">✓ Đã lấy</button></td></tr>`;
     });
   });
   h+=`</table>`;
-  el('bgBody').innerHTML=bar+sotHtml+`<div class="card scroll">${h}</div>
-   <div class="note">Tick ô vuông đầu mỗi <b>ĐVVC</b> để chọn nhiều hãng rồi bấm <b>🖨 In bàn giao</b> (in gộp 1 phiếu) hoặc <b>✓ Đánh dấu đã bàn giao</b> cho cả nhóm. <b>Đơn sót</b> (đỏ) = đã xuất ngày trước mà chưa bàn giao — xử lý nốt để khỏi quên. Trạng thái bàn giao được đồng bộ theo từng đơn (an toàn đa máy).</div>`;
+  var doneHtml='';
+  if(bgShowDone){
+    var pg={};picked.forEach(function(o){var k=o.dvvc||'(chưa có ĐVVC)';(pg[k]=pg[k]||[]).push(o);});
+    var pk=Object.keys(pg).sort();
+    doneHtml=`<div class="bar" style="margin-top:14px"><b class="sub">Đã bàn giao (${picked.length})</b></div><div class="card scroll"><table style="width:100%"><tr><th>ĐVVC</th><th>Mã đơn</th><th>Ngày</th><th>Lúc bàn giao</th><th></th></tr>`;
+    if(!pk.length)doneHtml+=`<tr><td colspan="5" class="sub" style="text-align:center;padding:10px">Chưa có.</td></tr>`;
+    pk.forEach(function(k){pg[k].sort(function(a,b){return (b.ngay||'').localeCompare(a.ngay||'');}).slice(0,800).forEach(function(o){var ms=(o.madon+'').replace(/'/g,'');doneHtml+=`<tr><td>${k}</td><td class="mono">${o.madon}</td><td>${(o.ngay||'').slice(0,10)}</td><td class="sub">${o._bg===true?'(đã đánh dấu)':o._bg}</td><td><button class="btn" style="padding:0 6px" onclick="bgMarkOne('${ms}',false)">↺ Bỏ</button></td></tr>`;});});
+    doneHtml+=`</table></div>`;
+  }
+  el('bgBody').innerHTML=bar+`<div class="card scroll">${h}</div>${doneHtml}
+   <div class="note">Danh sách = đơn <b>đã xuất</b> nhưng <b>ĐVVC chưa lấy</b> (gồm cả đơn <b>sót</b> ngày trước, tô đỏ). Cách dùng: tick các <b>ĐVVC</b> cùng một người tới lấy → <b>🖨 In bàn giao</b> in chung 1 phiếu → giao xong bấm <b>✓ Đánh dấu đã bàn giao</b>. Nếu bị bỏ sót vài đơn: bấm <b>✓ Đã lấy</b> riêng cho các đơn được lấy, các đơn sót để nguyên — hôm sau vẫn hiện ở đây (tô đỏ) để gộp vào đợt mới. <b>Lần đầu dùng:</b> bấm <b>🧹 Dọn nền đơn cũ</b> để coi toàn bộ đơn trước hôm nay là đã bàn giao.</div>`;
 }
 function bgPrint(){
   var dvs=Object.keys(bgSel).filter(function(d){return bgSel[d];});
-  var inRange=function(o){var d=(o.ngay||'').slice(0,10);return d>=bgFrom&&d<=bgTo;};
-  var pool=bgOrders().filter(function(o){return inRange(o)&&(bgShowDone||!o._bg);});
+  var pool=bgOrders().filter(function(o){return !o._bg;});
   if(dvs.length)pool=pool.filter(function(o){return dvs.indexOf(o.dvvc||'(chưa có ĐVVC)')>=0;});
-  if(!pool.length){alert('Không có đơn để in (chọn ĐVVC hoặc bỏ lọc).');return;}
+  if(!pool.length){alert('Không có đơn để in. Hãy tick ít nhất 1 ĐVVC ở danh sách chờ.');return;}
   var grp={};pool.forEach(function(o){var k=o.dvvc||'(chưa có ĐVVC)';(grp[k]=grp[k]||[]).push(o);});
   var body='';Object.keys(grp).sort().forEach(function(dv){
     body+=`<tr style="background:#e8eef6"><td colspan="4"><b>Đơn vị VC: ${dv}</b> — ${grp[dv].length} đơn</td></tr>`;
-    grp[dv].forEach(function(o,j){body+=`<tr><td class="c">${j+1}</td><td>${o.madon}</td><td>${o.vd||'—'}</td><td>${o.kenh}</td></tr>`;});
+    grp[dv].sort(function(a,b){return (a.ngay||'').localeCompare(b.ngay||'');}).forEach(function(o,j){body+=`<tr><td class="c">${j+1}</td><td>${o.madon}</td><td>${o.vd||'—'}</td><td>${o.kenh}</td></tr>`;});
     body+=`<tr><td colspan="4" style="border:none;height:26px"></td></tr>`;
   });
   el('printArea').innerHTML=`<div class="ph"><div class="ph-h"><div class="ttl">CÔNG TY TNHH LẬP NGUYÊN<br><span style="font-size:13px">PHIẾU BÀN GIAO VẬN CHUYỂN</span></div>
@@ -8606,10 +8613,10 @@ function rKKBan(){ ensureKK();var am=amKK();
   var opt=(arr,cur,lbl,isCat)=>`<option value="">${lbl}</option>`+arr.map(v=>`<option value="${v}" ${cur===v?'selected':''}>${isCat?(DATA.cats[v]||v):v}</option>`).join('');
   var allSel=prods.length&&prods.every(p=>DATA.kk.sel[p.code]);
   var nHidden=DATA.products.filter(p=>!p.combo&&(isN?p.type==='NVL':p.type!=='NVL')&&DATA.kk.hide[p.code]).length;
-  var Mkk=computeTon();var ltNow=function(c){var r=Mkk[c];return r?(r.dk+r.moi-(r.nb+r.hd+r.bh+r.qt+r.sx)):0;};
+  var bdW=computeTonWindow(_chotTs(),Date.now(),false,false);var bdOf=function(c){var r=bdW[c];return r?(r.moi-(r.nb+r.hd+r.bh+r.qt+r.sx)):0;};
   var h=`<tr><th style="width:24px"><input type="checkbox" id="kkAll" ${allSel?'checked':''} onchange="kkSelAll(this.checked)"></th><th>SKU</th><th>Tên SP</th><th>Danh mục</th><th>Người phụ trách</th><th class="r">Tồn lý thuyết</th><th class="r">Biến động từ lúc chốt</th><th class="r">Kiểm kho 1</th><th class="r">Kiểm kho 2</th><th class="r">Chênh lệch</th><th>Trạng thái</th><th class="r">Kiểm kho 3</th><th class="r">Tồn thực tế</th><th class="r">Lệch tồn</th><th>✔</th><th></th></tr>`;
   if(!prods.length)h+=`<tr><td colspan="16" class="sub" style="text-align:center;padding:14px">Không có mã phù hợp bộ lọc.</td></tr>`;
-  prods.forEach(p=>{var c=p.code;var lt=DATA.kk.snap[c]||0;var bd=ltNow(c)-lt;var fin=kkFinal(c);var sel=!!DATA.kk.sel[c];var dn=!!DATA.kk.done[c];var hid=!!DATA.kk.hide[c];
+  prods.forEach(p=>{var c=p.code;var lt=DATA.kk.snap[c]||0;var bd=bdOf(c);var fin=kkFinal(c);var sel=!!DATA.kk.sel[c];var dn=!!DATA.kk.done[c];var hid=!!DATA.kk.hide[c];
     var n1=(DATA.kk.kk1[c]!=null&&DATA.kk.kk1[c]!=='')?Number(DATA.kk.kk1[c]):null,n2=(DATA.kk.kk2[c]!=null&&DATA.kk.kk2[c]!=='')?Number(DATA.kk.kk2[c]):null;
     var ck12=(n1!=null&&n2!=null)?(n1-n2):'';
     var tc=DATA.kk.thuc[c];var th=(tc!=null&&tc!=='')?Number(tc):'';var lt2=(th!=='')?th-lt:'';
