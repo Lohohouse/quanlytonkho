@@ -7052,8 +7052,8 @@ function rSanpham(){
     <button id="spTabTp" onclick="setSpTab('tp')">Thành phẩm / 成品</button>
   </div>
   <div class="bar">
-    <label class="sub">Nhóm:</label><select id="spGroup" onchange="spGroup=this.value;drawSp()"></select>
-    <select id="spStatus" onchange="spStatus=this.value;drawSp()">
+    <label class="sub">Nhóm:</label><select id="spGroup" onchange="spGroup=this.value;spSel={};drawSp()"></select>
+    <select id="spStatus" onchange="spStatus=this.value;spSel={};drawSp()">
       <option value="all">Tất cả TT 全部狀態</option><option value="active">Đang bán</option><option value="paused">Tạm ngưng</option><option value="stopped">Ngưng bán</option><option value="importing">Đang nhập hàng</option><option value="drafting">Làm TT SP</option>
     </select>
     <input id="spSearch" placeholder="Tìm mã, tên, 中文… (không dấu ok)" style="flex:1;min-width:190px;max-width:330px" oninput="drawSp()">
@@ -7076,7 +7076,7 @@ function buildGroupSel(){
   el('spGroup').innerHTML=o.join('');
 }
 function setSpTab(tab,keep){
-  spTab=tab; if(!keep)spGroup='all';
+  spTab=tab; if(!keep){spGroup='all';spSel={};}   // đổi tab -> bỏ tích chọn cũ (tránh áp dụng nhầm mã ẩn)
   var tp=el('spTabTp'),nv=el('spTabNvl'); if(tp)tp.className=tab==='tp'?'on':''; if(nv)nv.className=tab==='nvl'?'on':'';
   buildGroupSel(); if(el('spGroup'))el('spGroup').value=spGroup; drawSp();
 }
@@ -7102,7 +7102,7 @@ function drawSp(){
   list.forEach((p,idx)=>{
     var badge=p.type==='NVL'?'t-warn':(p.combo?'t-info':'t-ok');
     var st=p.status==='active'?'t-ok':'t-warn';
-    h+=`<tr draggable="true" ondragstart="spDragStart('${p.code}')" ondragover="event.preventDefault()" ondrop="spDrop('${p.code}')" ${p.hidden?'style="opacity:.42"':''}><td><input type="checkbox" ${spSel[p.code]?'checked':''} onchange="spPick('${p.code}',this.checked)"></td><td style="cursor:grab;text-align:center;color:#b9c2cf" title="Kéo để đổi vị trí">⠿</td><td>${idx+1}</td><td onclick="spImgModal('${p.code}')" style="cursor:pointer" title="Xem / thêm ảnh">${p.img?('<img src="'+p.img+'" style="width:32px;height:32px;object-fit:cover;border-radius:4px;border:1px solid var(--line)">'):('<span style=\'color:#cbd2db;font-size:15px\'>📷</span>')}</td><td class="mono">${p.code}</td><td>${p.vi}<div class="sub">${p.zh||''}</div></td><td><span class="tag ${badge}">${p.combo?'Combo':p.type}</span></td><td>${p.cat}</td><td>${p.unit}</td><td>${p.size||''}</td><td>${p.color||''}</td><td class="sub">${p.supplier||'—'}</td><td style="line-height:1.4">${chCells(p)}</td><td><span class="tag ${st}">${DATA.statusMap[p.status]||p.status}</span></td><td style="white-space:nowrap"><button class="btn" style="padding:3px 8px" onclick="${p.combo?'openCombo':'openSP'}('${p.code}')">Sửa</button> <button class="btn" style="padding:3px 6px" title="Sao chép" onclick="spClone('${p.code}')">📋</button> <button class="btn" style="padding:3px 6px" title="${p.hidden?'Hiện lại':'Ẩn khỏi trang'}" onclick="spToggleHide('${p.code}')">${p.hidden?'🚫':'👁'}</button></td></tr>`;
+    h+=`<tr draggable="true" ondragstart="spDragStart('${p.code}')" ondragover="event.preventDefault()" ondrop="spDrop('${p.code}')" ${p.hidden?'style="opacity:.42"':''}><td><input type="checkbox" ${spSel[p.code]?'checked':''} onchange="spPick('${p.code}',this.checked)"></td><td style="cursor:grab;text-align:center;color:#b9c2cf" title="Kéo để đổi vị trí">⠿</td><td>${idx+1}</td><td onclick="spImgModal('${p.code}')" style="cursor:pointer" title="Xem / thêm ảnh">${p.img?('<img src="'+p.img+'" style="width:32px;height:32px;object-fit:cover;border-radius:4px;border:1px solid var(--line)">'):('<span style=\'color:#cbd2db;font-size:15px\'>📷</span>')}</td><td class="mono">${p.code}</td><td>${p.vi}<div class="sub">${p.zh||''}</div></td><td><span class="tag ${badge}">${p.combo?'Combo':p.type}</span></td><td>${(DATA.cats&&DATA.cats[p.ck])||p.cat||''}</td><td>${p.unit}</td><td>${p.size||''}</td><td>${p.color||''}</td><td class="sub">${p.supplier||'—'}</td><td style="line-height:1.4">${chCells(p)}</td><td><span class="tag ${st}">${DATA.statusMap[p.status]||p.status}</span></td><td style="white-space:nowrap"><button class="btn" style="padding:3px 8px" onclick="${p.combo?'openCombo':'openSP'}('${p.code}')">Sửa</button> <button class="btn" style="padding:3px 6px" title="Sao chép" onclick="spClone('${p.code}')">📋</button> <button class="btn" style="padding:3px 6px" title="${p.hidden?'Hiện lại':'Ẩn khỏi trang'}" onclick="spToggleHide('${p.code}')">${p.hidden?'🚫':'👁'}</button></td></tr>`;
     if(p.combo){var its=(p.items&&p.items.length)?p.items:(DATA.bom[p.code]||[]); its.forEach(c=>{h+=`<tr class="child"><td></td><td></td><td></td><td></td><td class="mono">↳ ${c.code}</td><td colspan="8">${nm(c.code)}</td><td class="r">× ${c.qty}</td><td></td></tr>`;});}
   });
   el('tblSp').innerHTML=h;
@@ -7114,13 +7114,13 @@ function spSelClear(){spSel={};drawSp();}
 function spBulkGroup(ck){if(!ck)return;Object.keys(spSel).forEach(c=>{var p=P(c);if(p){p.ck=ck;p.cat=DATA.cats[ck]||ck;}});save();buildGroupSel();drawSp();}
 function spBulkType(t){if(!t)return;Object.keys(spSel).forEach(c=>{var p=P(c);if(p)p.type=t;});save();drawSp();}
 function spBulkStatus(st){if(!st)return;Object.keys(spSel).forEach(c=>{var p=P(c);if(p)p.status=st;});save();drawSp();}
-function spBulkDelete(){var ks=Object.keys(spSel);if(!ks.length)return;if(!confirm('Xoá '+ks.length+' sản phẩm đã chọn?'))return;DATA.products=DATA.products.filter(p=>!spSel[p.code]);ks.forEach(c=>delete DATA.bom[c]);spSel={};save();buildGroupSel();drawSp();}
-function drawSpBulk(){var b=el('spBulk');if(!b)return;var n=Object.keys(spSel).length;if(!n){b.style.display='none';b.innerHTML='';return;}b.style.display='';
+function spBulkDelete(){var ks=Object.keys(spSel).filter(function(c){return spVisible.indexOf(c)>=0;});if(!ks.length){alert('Chưa chọn mã nào đang hiển thị.');return;}if(!confirm('Xoá '+ks.length+' sản phẩm đã chọn (đang hiển thị)?'))return;var del={};ks.forEach(function(c){del[c]=1;});DATA.products=DATA.products.filter(p=>!del[p.code]);ks.forEach(c=>delete DATA.bom[c]);spSel={};save();buildGroupSel();drawSp();}
+function drawSpBulk(){var b=el('spBulk');if(!b)return;var n=Object.keys(spSel).filter(function(c){return spVisible.indexOf(c)>=0;}).length;if(!n){b.style.display='none';b.innerHTML='';return;}b.style.display='';
   var catOpts='<option value="">— Đổi nhóm —</option>'+Object.keys(DATA.cats).map(ck=>`<option value="${ck}">${DATA.cats[ck]}</option>`).join('');
   var stOpts='<option value="">— Đổi trạng thái —</option>'+Object.keys(DATA.statusMap).map(x=>`<option value="${x}">${DATA.statusMap[x]}</option>`).join('');
   b.innerHTML=`<div class="bar" style="background:#1f4e2e;color:#fff;border-radius:10px;padding:9px 13px;margin:8px 0;align-items:center"><span style="background:#e8b931;color:#1f4e2e;border-radius:999px;padding:3px 12px;font-weight:700">${n}</span><span>sản phẩm đã chọn</span><span class="sub" style="color:#cfe0d4;margin-left:6px">· kéo 1 dòng đã chọn để di chuyển cả nhóm</span><div class="sp"></div><select id="bkGroup">${catOpts}</select><select id="bkType"><option value="">— Đổi loại —</option><option value="Thành phẩm">Thành phẩm</option><option value="NVL">NVL</option></select><select id="bkStatus">${stOpts}</select><button class="btn pri" onclick="spBulkApply()">✓ Áp dụng</button><button class="btn" style="background:#c0392b;color:#fff;border-color:#c0392b" onclick="spBulkDelete()">🗑 Xoá</button><button class="btn" onclick="spSelClear()">✗ Bỏ chọn 取消選擇</button></div>`;
 }
-function spBulkApply(){var ks=Object.keys(spSel);if(!ks.length)return;var ck=el('bkGroup').value,t=el('bkType').value,st=el('bkStatus').value;
+function spBulkApply(){var ks=Object.keys(spSel).filter(function(c){return spVisible.indexOf(c)>=0;});if(!ks.length){alert('Chưa chọn mã nào đang hiển thị.');return;}var ck=el('bkGroup').value,t=el('bkType').value,st=el('bkStatus').value;
   if(!ck&&!t&&!st){alert('Chọn ít nhất 1 thay đổi: nhóm / loại / trạng thái.');return;}
   ks.forEach(c=>{var p=P(c);if(!p)return;if(ck){p.ck=ck;p.cat=DATA.cats[ck]||ck;}if(t)p.type=t;if(st)p.status=st;});
   save();buildGroupSel();drawSp();alert('Đã áp dụng cho '+ks.length+' sản phẩm.');}
