@@ -7356,31 +7356,33 @@ function computeTon(){
   function ini(c){ if(!t[c])t[c]={dk:0,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0}; return t[c]; }
   function add(c,f,q){ if(!c)return; ini(c)[f]+=(+q||0); }
   var ps=DATA.periodStart||'';
-  var pts=DATA.periodStartTs||0;   // Mức 2: ranh giới kỳ theo DẤU THỜI GIAN (ms). Nếu có pts -> dùng pts; chưa có -> dùng ngày (ps) như cũ.
-  function inKy(rec,dateStr,dot){
+  var gpts=DATA.periodStartTs||0;
+  function inKyC(rec,dateStr,dot,code){   // ranh giới kỳ theo TỪNG MÃ: mã đã đóng kỳ riêng dùng mốc riêng (DATA.tonPts[code]); chưa có dùng mốc chung/ngày
+    var pts=(DATA.tonPts&&DATA.tonPts[code]!=null)?DATA.tonPts[code]:gpts;
     if(pts){ var ct=(rec&&rec._ct!=null)?rec._ct:0;
       if(!ct){ if(dot){var td=Date.parse(dot);if(!isNaN(td))ct=td;} if(!ct&&dateStr){var dd=Date.parse(dateStr+'T00:00:00');if(!isNaN(dd))ct=dd;} }
       return ct>pts; }
     return !(ps&&dateStr&&dateStr<ps);
   }
+  function addG(rec,dateStr,dot,code,f,q){ if(code&&inKyC(rec,dateStr,dot,code)) add(code,f,q); }
   // Tồn đầu + nhập mua: lấy từ seed/kiểm kho
   DATA.ton.forEach(r=>{var x=ini(r.code);x.dk+=(+r.dk||0);x.moi+=(+r.moi||0);});
   // BÁN HÀNG + QUÀ (sàn 0đ) từ đơn đã xuất ở ④
-  DATA.orders.forEach(o=>{ if(o.tt!=='Da xuat')return; if(!inKy(o,o.ngay,o.dot))return;
-    if(o.split&&o.split.length){o.split.forEach(function(s){var h2=skuHe({sku:o.sku,kenh:o.kenh,skuFix:s.skuFix});var q=+s.sl||0;if(o.qua){add(h2.code,'qt',q);}else if(h2.isBase){add(h2.code,'bh',q);}else{explode(h2.code,q).forEach(function(c){add(c.code,'bh',c.qty);});}});return;}
+  DATA.orders.forEach(o=>{ if(o.tt!=='Da xuat')return;
+    if(o.split&&o.split.length){o.split.forEach(function(s){var h2=skuHe({sku:o.sku,kenh:o.kenh,skuFix:s.skuFix});var q=+s.sl||0;if(o.qua){addG(o,o.ngay,o.dot,h2.code,'qt',q);}else if(h2.isBase){addG(o,o.ngay,o.dot,h2.code,'bh',q);}else{explode(h2.code,q).forEach(function(c){addG(o,o.ngay,o.dot,c.code,'bh',c.qty);});}});return;}
     var he=skuHe(o);
-    if(o.qua){ add(he.code,'qt',o.sl); }
-    else if(he.isBase){ add(he.code,'bh',o.sl); }
-    else { explode(he.code,o.sl).forEach(c=>add(c.code,'bh',c.qty)); }
+    if(o.qua){ addG(o,o.ngay,o.dot,he.code,'qt',o.sl); }
+    else if(he.isBase){ addG(o,o.ngay,o.dot,he.code,'bh',o.sl); }
+    else { explode(he.code,o.sl).forEach(c=>addG(o,o.ngay,o.dot,c.code,'bh',c.qty)); }
   });
   // QUÀ tự áp (1 lần/đơn)
   var gd={};
-  DATA.orders.forEach(o=>{ if(o.tt!=='Da xuat'||gd[o.madon])return; if(!inKy(o,o.ngay,o.dot))return; gd[o.madon]=1; giftFor(o).forEach(gr=>add(gr.sku,'qt',gr.sl)); });
+  DATA.orders.forEach(o=>{ if(o.tt!=='Da xuat'||gd[o.madon])return; gd[o.madon]=1; giftFor(o).forEach(gr=>addG(o,o.ngay,o.dot,gr.sku,'qt',gr.sl)); });
   // NỘI BỘ + HOẠT ĐỘNG (nhập tay)
-  (DATA.xnb||[]).forEach(r=>{if(!inKy(r,r.ngay))return;add(r.sku,'nb',r.sl);});
-  (DATA.xhd||[]).forEach(r=>{if(!inKy(r,r.ngay))return;add(r.sku,'hd',r.sl);});
+  (DATA.xnb||[]).forEach(r=>{addG(r,r.ngay,null,r.sku,'nb',r.sl);});
+  (DATA.xhd||[]).forEach(r=>{addG(r,r.ngay,null,r.sku,'hd',r.sl);});
   // SẢN XUẤT: xuất NVL -> sx; nhập thành phẩm -> moi
-  (DATA.nx||[]).forEach(r=>{ if(!inKy(r,r.ngay))return; if(r.loai==='xuat')add(r.code,'sx',r.sl); else add(r.code,'moi',r.sl); });
+  (DATA.nx||[]).forEach(r=>{ addG(r,r.ngay,null,r.code, r.loai==='xuat'?'sx':'moi', r.sl); });
   _tonCache=t;_tonCacheV=_dataVer;
   return t;
 }
@@ -7415,15 +7417,37 @@ function computeTonWindow(startTs,endTs,seedDk,seedMoi){
 }
 function computeTonMonth(mon){
   var ym='2026-'+('0'+mon).slice(-2);
-  if(DATA.kyArchive&&DATA.kyArchive[ym]) return {rows:DATA.kyArchive[ym].rows, dauTrong:false, state:'closed'};
-  var cur=curKyYm();
+  var arch=(DATA.kyArchive&&DATA.kyArchive[ym])?DATA.kyArchive[ym].rows:{};
   var chotDone=!!(DATA.kk&&DATA.kk.snap&&Object.keys(DATA.kk.snap).length);
-  if(ym===cur){
-    if(chotDone){ var curStart=DATA.periodStartTs||(DATA.periodStart?Date.parse(DATA.periodStart+'T00:00:00'):0); return {rows:computeTonWindow(curStart,_chotTs(),true,true), dauTrong:false, state:'closing'}; }
-    return {rows:computeTon(), dauTrong:false, state:'open'};
-  }
-  if(chotDone && ym===_nextYm(cur)){ return {rows:computeTonWindow(_chotTs(),Date.now(),false,false), dauTrong:true, state:'pending'}; }
-  return {rows:{}, dauTrong:false, state:'empty'};
+  var chotTs=_chotTs();
+  var glob=curKyYm();
+  var gStart=DATA.periodStartTs||(DATA.periodStart?Date.parse(DATA.periodStart+'T00:00:00'):0);
+  var meta={};   // theo TỪNG MÃ: mã c xét theo kỳ hiện hành của riêng nó (DATA.tonKy/tonPts)
+  DATA.products.forEach(function(p){ if(p.combo||p.type==='Combo')return; var c=p.code;
+    if(arch[c])return;   // tháng này mã c đã đóng -> dùng số đã lưu (archive)
+    var cm=(DATA.tonKy&&DATA.tonKy[c])?DATA.tonKy[c]:glob;
+    var cpts=(DATA.tonPts&&DATA.tonPts[c]!=null)?DATA.tonPts[c]:gStart;
+    var inChot=chotDone&&DATA.kk.snap[c]!=null;
+    if(ym===cm){ meta[c]={st:cpts,en:(inChot?chotTs:Date.now()),seed:true,dauTrong:false,state:inChot?'closing':'open'}; }
+    else if(inChot&&ym===_nextYm(cm)){ meta[c]={st:chotTs,en:Date.now(),seed:false,dauTrong:true,state:'pending'}; }
+  });
+  var t={};
+  function ini(c){ if(!t[c])t[c]={dk:0,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0}; return t[c]; }
+  function okC(rec,date,dot,c){ var m=meta[c]; if(!m)return false; var ct=_effTs(rec,date,dot); return ct>m.st&&ct<=m.en; }
+  function addC(rec,date,dot,c,f,q){ if(c&&meta[c]&&okC(rec,date,dot,c)) ini(c)[f]+=(+q||0); }
+  Object.keys(meta).forEach(function(c){ if(meta[c].seed){ var r=DATA.ton.find(function(x){return x.code===c;}); if(r){ini(c).dk+=(+r.dk||0);ini(c).moi+=(+r.moi||0);} } });
+  DATA.orders.forEach(function(o){ if(o.tt!=='Da xuat')return;
+    if(o.split&&o.split.length){o.split.forEach(function(s){var h2=skuHe({sku:o.sku,kenh:o.kenh,skuFix:s.skuFix});var q=+s.sl||0;if(o.qua){addC(o,o.ngay,o.dot,h2.code,'qt',q);}else if(h2.isBase){addC(o,o.ngay,o.dot,h2.code,'bh',q);}else{explode(h2.code,q).forEach(function(c){addC(o,o.ngay,o.dot,c.code,'bh',c.qty);});}});return;}
+    var he=skuHe(o);
+    if(o.qua){addC(o,o.ngay,o.dot,he.code,'qt',o.sl);}else if(he.isBase){addC(o,o.ngay,o.dot,he.code,'bh',o.sl);}else{explode(he.code,o.sl).forEach(function(c){addC(o,o.ngay,o.dot,c.code,'bh',c.qty);});}
+  });
+  var gd={};
+  DATA.orders.forEach(function(o){ if(o.tt!=='Da xuat'||gd[o.madon])return; gd[o.madon]=1; giftFor(o).forEach(function(gr){addC(o,o.ngay,o.dot,gr.sku,'qt',gr.sl);}); });
+  (DATA.xnb||[]).forEach(function(r){addC(r,r.ngay,null,r.sku,'nb',r.sl);});
+  (DATA.xhd||[]).forEach(function(r){addC(r,r.ngay,null,r.sku,'hd',r.sl);});
+  (DATA.nx||[]).forEach(function(r){addC(r,r.ngay,null,r.code,r.loai==='xuat'?'sx':'moi',r.sl);});
+  var rows={}; Object.keys(arch).forEach(function(c){rows[c]=arch[c];}); Object.keys(t).forEach(function(c){rows[c]=t[c];});
+  return {rows:rows, meta:meta, arch:arch};
 }
 function tonCalc(r){var out=r.nb+r.hd+r.bh+r.qt+r.sx;var ton=r.dk+r.moi-out;var tb=+(out/10).toFixed(1);var con=tb>0?Math.round(ton/tb):'∞';return{out,ton,tb,con};}
 let tonSub='nvl', tonFind='', tonMonth=6, tonCat='', tonWarn='';
@@ -7486,7 +7510,7 @@ function rTonkho(){
   rTonDraw();
 }
 function rTonDraw(){
-  var _mw=computeTonMonth(tonMonth);var m=_mw.rows;var dauTrong=_mw.dauTrong;var _mstate=_mw.state;
+  var _mw=computeTonMonth(tonMonth);var m=_mw.rows;
   var prods=DATA.products.filter(p=> (tonSub==='nvl' ? p.type==='NVL' : p.type==='Thành phẩm') && !p.combo && p.type!=='Combo' );
   ensureTonHide(); if(!tonShowHidden)prods=prods.filter(p=>!DATA.tonHide[p.code]);
   if(tonCat)prods=prods.filter(p=>p.ck===tonCat);
@@ -7517,7 +7541,7 @@ function rTonDraw(){
       <th class="r" style="${ss(T5)};${GAP}">Ngưỡng (ngày)<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">警戒天數</span></th><th style="${ss(T5)};text-align:center">Cảnh báo<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">警示</span></th><th class="r" style="${ss(T6)};${GAP}">SL dự kiến đặt<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">預計訂量</span></th><th style="${ss(T6)}">ĐVT đặt<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">訂貨單位</span></th><th class="r" style="${ss(T6)}">Số ngày dùng<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">可用天數</span></th>
     </tr></thead><tbody>`;
   var nLow=0,nOver=0,shown=0,bodyRows='';
-  prods.forEach(p=>{var r=m[p.code]||{code:p.code,dk:0,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0};var cv=tonConvOf(p.code);var mm=cv?cv.per:0;var cu=cv?cv.unit:'';var ordU=cv?cv.unit:unit(p.code);var pQty=(DATA.plan&&DATA.plan[p.code])||'';
+  prods.forEach(p=>{var r=m[p.code]||{code:p.code,dk:0,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0};var dauTrong=(_mw.meta&&_mw.meta[p.code])?_mw.meta[p.code].dauTrong:false;var _mstate=(_mw.arch&&_mw.arch[p.code])?'closed':((_mw.meta&&_mw.meta[p.code])?_mw.meta[p.code].state:'empty');var cv=tonConvOf(p.code);var mm=cv?cv.per:0;var cu=cv?cv.unit:'';var ordU=cv?cv.unit:unit(p.code);var pQty=(DATA.plan&&DATA.plan[p.code])||'';
     var out=r.nb+r.hd+r.bh+r.qt+r.sx;var ton=r.dk+r.moi-out;
     var tbBan=+(r.bh/dd).toFixed(2),tbTong=+(out/dd).toFixed(2);
     var con=tbTong>0?Math.round(ton/tbTong):'∞';
@@ -7544,7 +7568,7 @@ function rTonDraw(){
     </tr>`;});
   if(!shown)bodyRows=`<tr><td colspan="21" class="sub" style="text-align:center;padding:14px">Không có mã phù hợp bộ lọc.</td></tr>`;
   el('tblTon').innerHTML=h+bodyRows+'</tbody>';
-  var _stateNote=_mstate==='empty'?' · <b style="color:#8893a5">Kỳ này chưa bắt đầu (chưa có số liệu)</b>':(_mstate==='pending'?' · <b style="color:#b9770e">Kỳ mới — đầu kỳ chưa chốt; chỉ hiện xuất/nhập sau khi Chốt</b>':(_mstate==='closing'?' · <b style="color:#2563b0">Kỳ đang chốt — số liệu tới thời điểm bấm Chốt</b>':(_mstate==='closed'?' · <b style="color:#1e8e4e">Kỳ đã đóng (khóa)</b>':'')));
+  var _stateNote=shown?'':' · <b style="color:#8893a5">Kỳ này chưa có số liệu cho mã nào</b>';
   var ce=el('tonCount');if(ce)ce.innerHTML='Hiện <b>'+shown+'</b> mã '+(tonSub==='nvl'?'nguyên liệu':'thành phẩm')+' · cần đặt thêm: <b style="color:#b9770e">'+nLow+'</b> · tồn lâu: <b style="color:#2563b0">'+nOver+'</b> · TB chia theo <b>'+dRun+' ngày</b> đã chạy'+_stateNote;
 }
 
@@ -8705,32 +8729,27 @@ function rKKDong(){ ensureKK();var am=amKK();
    <div class="bar"><div class="sp"></div><button class="btn pri" style="background:var(--green);border-color:var(--green)" ${done.length?'':'disabled'} onclick="kkDong()">🔒 Chốt kỳ & chuyển ${done.length} mã sang đầu kỳ</button></div>`;
 }
 function kkDong(){ ensureKK();var done=Object.keys(DATA.kk.done).filter(c=>DATA.kk.done[c]);if(!done.length){alert('Chưa có mã đã xác nhận ✓.');return;}
-  if(!confirm('Đóng kỳ?\n'+done.length+' mã đã xác nhận. Đầu kỳ mới = Tồn thực tế (quy về lúc chốt). Mọi xuất/nhập SAU khi chốt sẽ nằm ở kỳ kế tiếp. Kỳ cũ khoá.'))return;
+  if(!confirm('Đóng kỳ '+done.length+' mã ĐÃ XÁC NHẬN?\nCHỉ những mã này chuyển sang kỳ mới; các mã khác GIỮ NGUYÊN, không bị đóng.'))return;
   var chotTs=_chotTs();
-  var oldStart=DATA.periodStartTs||(DATA.periodStart?Date.parse(DATA.periodStart+'T00:00:00'):0);
   var ymClose=_ymOfDate(DATA.kk.ngayChot||new Date().toISOString().slice(0,10));
-  // 1) Lưu "ảnh" số liệu kỳ vừa đóng (đầu kỳ + nhập/xuất TRƯỚC lúc chốt) để xem lại
-  DATA.kyArchive=DATA.kyArchive||{};
-  DATA.kyArchive[ymClose]={ngayChot:DATA.kk.ngayChot,lenh:DATA.kk.lenh,chotTs:chotTs,dongTs:Date.now(),rows:computeTonWindow(oldStart,chotTs,true,true)};
-  // 2) Đầu kỳ mới = Tồn thực tế quy về lúc chốt (mã đã kiểm); mã chưa kiểm = tồn lý thuyết lúc chốt
-  var doneSet={};done.forEach(c=>doneSet[c]=1);
-  DATA.products.forEach(function(p){ if(p.combo)return; var c=p.code; var dk;
-    if(doneSet[c]){ var tc=DATA.kk.thuc[c]; dk=(tc!=null&&tc!=='')?Number(tc):(DATA.kk.snap[c]||0); }
-    else { dk=(DATA.kk.snap[c]!=null?DATA.kk.snap[c]:0); }
+  var ymNext=_nextYm(ymClose);
+  var gStart0=DATA.periodStartTs||(DATA.periodStart?Date.parse(DATA.periodStart+'T00:00:00'):0);
+  DATA.tonPts=DATA.tonPts||{}; DATA.tonKy=DATA.tonKy||{}; DATA.kyArchive=DATA.kyArchive||{};
+  if(!DATA.kyArchive[ymClose])DATA.kyArchive[ymClose]={ngayChot:DATA.kk.ngayChot,lenh:DATA.kk.lenh,chotTs:chotTs,dongTs:Date.now(),rows:{}};
+  // 1) Lưu "ảnh" kỳ vừa đóng cho TỪNG mã đã xác nhận (gom theo mốc bắt đầu để tính nhanh)
+  var byStart={}; done.forEach(function(c){var st=(DATA.tonPts[c]!=null)?DATA.tonPts[c]:gStart0;(byStart[st]=byStart[st]||[]).push(c);});
+  Object.keys(byStart).forEach(function(k){ var w=computeTonWindow(+k,chotTs,true,true); byStart[k].forEach(function(c){ DATA.kyArchive[ymClose].rows[c]=w[c]||{dk:0,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0}; }); });
+  // 2) Đặt đầu kỳ mới = Tồn thực tế (quy về lúc chốt) + mốc riêng cho TỪNG mã đã xác nhận; mã khác KHÔNG đụng tới
+  done.forEach(function(c){
+    var tc=DATA.kk.thuc[c]; var dk=(tc!=null&&tc!=='')?Number(tc):(DATA.kk.snap[c]||0);
     var r=DATA.ton.find(x=>x.code===c); if(r){r.dk=dk;r.moi=0;r.nb=0;r.hd=0;r.bh=0;r.qt=0;r.sx=0;} else DATA.ton.push({code:c,dk:dk,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0});
+    DATA.tonPts[c]=chotTs;   // mốc kỳ mới của riêng mã c = lúc bấm Chốt
+    DATA.tonKy[c]=ymNext;    // tháng hiện hành mới của mã c
   });
-  // 3) KHÓA giao dịch cũ chưa có dấu thời gian -> mốc chia kỳ = lúc bấm Chốt; xuất/nhập sau chốt tự sang kỳ mới
-  DATA.orders.forEach(function(o){ if(o.tt==='Da xuat'&&o._ct==null)o._ct=1; });
-  (DATA.xnb||[]).forEach(function(r){ if(r._ct==null)r._ct=1; });
-  (DATA.xhd||[]).forEach(function(r){ if(r._ct==null)r._ct=1; });
-  (DATA.nx||[]).forEach(function(r){ if(r._ct==null)r._ct=1; });
   DATA.kkHistory=DATA.kkHistory||{};var ym=DATA.kk.ngayChot?DATA.kk.ngayChot.slice(0,7):(new Date().toISOString().slice(0,7));
   DATA.kkHistory[ym]={ngayChot:DATA.kk.ngayChot,lenh:DATA.kk.lenh,items:done.map(c=>{var lt=DATA.kk.snap[c]||0;var tc=DATA.kk.thuc[c];var th=(tc!=null&&tc!=='')?Number(tc):lt;var ppl=[];if(DATA.kk.p1[c])ppl.push(DATA.kk.p1[c]);if(DATA.kk.p2[c])ppl.push(DATA.kk.p2[c]);if(DATA.kk.p3[c])ppl.push(DATA.kk.p3[c]);return{code:c,lt:lt,thuc:th,diff:th-lt,ppl:ppl.join(', ')};})};
-  DATA.periodStart=DATA.kk.ngayChot||DATA.periodStart;
-  DATA.periodStartTs=chotTs;            // mốc kỳ mới = thời điểm CHỐT
-  DATA.curKyYm=_nextYm(ymClose);        // tháng hiện tại mới
   DATA.kk={ngayChot:'',snap:{},kk1:{},kk2:{},kk3:{},thuc:{},hide:{},p1:{},p2:{},p3:{},done:{},sel:{},lenh:'',confirmed:false};
-  save();alert('Đã đóng kỳ. Đầu kỳ mới = tồn thực tế lúc chốt. Xuất/nhập sau chốt đã nằm ở kỳ '+DATA.curKyYm+'.');kkSub='chot';rKiemkho();
+  save();alert('Đã đóng kỳ '+done.length+' mã (chỉ mã đã xác nhận). Các mã khác giữ nguyên. Xuất/nhập sau chốt của các mã này đã sang kỳ '+ymNext+'.');kkSub='chot';rKiemkho();
 }
 function inKiemKho(){ ensureKK();var isN=kkSub2==='nvl';var prods=kkFiltered();if(!prods.length){alert('Không có dòng nào để in (theo bộ lọc).');return;}
   var body=prods.map(p=>{var c=p.code;var ppl=[];if(DATA.kk.p1[c])ppl.push(DATA.kk.p1[c]);if(DATA.kk.p2[c])ppl.push(DATA.kk.p2[c]);if(DATA.kk.p3[c])ppl.push(DATA.kk.p3[c]);
