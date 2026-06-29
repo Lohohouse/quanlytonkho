@@ -7803,7 +7803,9 @@ function rQuaTangXuat(){
 function ensureHoan(){if(!DATA.hoan)DATA.hoan={};}
 function ensureSonLe(){if(!DATA.sonLe)DATA.sonLe=[];}
 let hhView='don';
-let hhF={sit:'',step:'',stt:''};
+let hhF={sit:'',step:'',stt:'',from:'',to:''};
+let hhSelHuy={};
+let hhVisRecall=[];
 let hhExpand={};
 function isChietRet(o){var he=skuHe(o);return he.isBase&&!!(o.mau&&(''+o.mau).trim());}
 function hhTodayISO(){return new Date().toISOString().slice(0,10);}
@@ -7827,11 +7829,14 @@ function rHoanHuy(){ ensureHoan(); ensureSonLe(); if(!el('hoanBody'))return;
   var stepOpts=[['','Quy trình 流程: tất cả'],['none','— không cần / chưa chọn'],['cho','① Chờ về kho'],['kiem','② Đang kiểm tra'],['nhaplai','③ Nhập lại kho'],['sonle','③ → Kho sơn lẻ'],['loaibo','③ Loại bỏ']];
   var sttOpts=[['','Thao tác 操作: tất cả'],['chua','Chưa xử lý'],['dang','Đang xử lý'],['xong','Đã xong']];
   function sel2(id,opts,cur){return `<select id="${id}" onchange="hhApply()" style="font-weight:600">`+opts.map(o=>`<option value="${o[0]}" ${cur===o[0]?'selected':''}>${o[1]}</option>`).join('')+`</select>`;}
-  var bar=`<div class="bar" style="margin-top:8px">${sel2('hhSit',sitOpts,hhF.sit)}${sel2('hhStep',stepOpts,hhF.step)}${sel2('hhStt',sttOpts,hhF.stt)}<div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblHoan','Hoan huy')">⬇ Excel 匯出</button></div>`;
+  var bar=`<div class="bar" style="margin-top:8px">${sel2('hhSit',sitOpts,hhF.sit)}${sel2('hhStep',stepOpts,hhF.step)}${sel2('hhStt',sttOpts,hhF.stt)}<span class="sub">Từ</span><input id="hhFrom" type="date" value="${hhF.from}" onchange="hhApply()" style="width:140px"><span class="sub">đến</span><input id="hhTo" type="date" value="${hhF.to}" onchange="hhApply()" style="width:140px"><button class="btn" onclick="hhClearF()">✗ Xóa lọc</button><div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblHoan','Hoan huy')">⬇ Excel 匯出</button></div>`;
+  var nSelHuy=Object.keys(hhSelHuy).filter(function(m){return hhSelHuy[m];}).length;
+  var barBulk=`<div class="bar" style="margin-top:-4px"><b class="sub">Hủy sau xuất:</b><button class="btn" onclick="hhSelAllHuy()">☑ Chọn tất cả (đang hiện)</button><button class="btn" onclick="hhSelHuy={};rHoanHuy()">▢ Bỏ chọn</button><button class="btn pri" onclick="hhThuHoiBulk()">↩ Thu hồi xuất đã chọn (<span id="hhSelN">${nSelHuy}</span>)</button></div>`;
   var manual=`<div class="bar" style="margin-top:8px;background:#eef4fb;border:1px solid var(--line);border-radius:10px;padding:8px 12px"><b class="sub">Đánh dấu HOÀN thủ công (đơn đã giao, khách trả):</b><input id="hhMa" placeholder="Mã đơn (đã xuất)" style="width:200px"><button class="btn pri" onclick="hhAdd()">+ Thêm đơn hoàn</button></div>`;
-  var H='';
+  var H='';hhVisRecall=[];
   rows.forEach(g=>{
     var o=g.o;var exported=g.lines.some(l=>l.tt==='Da xuat');var hh=DATA.hoan[o.madon]||{};
+    var _ng=(o.ngay||'').slice(0,10);if(hhF.from&&_ng<hhF.from)return;if(hhF.to&&_ng>hhF.to)return;
     var isHuy=(o.tthd==='huy');
     if(isHuy){
       var sit=(exported||hh.thuhoi)?'huysau':'huytruoc';
@@ -7844,7 +7849,8 @@ function rHoanHuy(){ ensureHoan(); ensureSonLe(); if(!el('hoanBody'))return;
       if(!exported&&!hh.thuhoi){sitTag='<span class="tag" style="background:#faeeda;color:#854f0b;font-weight:700">Hủy trước xuất</span>';act='<span style="color:#1e8e4e;font-weight:600">✓ Không ảnh hưởng tồn</span>';}
       else if(exported&&!hh.thuhoi){sitTag='<span class="tag" style="background:#fcebeb;color:#a32d2d;font-weight:700">Hủy sau xuất</span>';act=`<button class="btn pri" onclick="hhThuHoi('${o.madon}')">↩ Thu hồi xuất (trả tồn)</button>`;}
       else {sitTag='<span class="tag" style="background:#fcebeb;color:#a32d2d;font-weight:700">Hủy sau xuất</span>';act='<span style="background:#e1f5ee;color:#0f6e56;font-weight:700;border-radius:8px;padding:2px 9px;font-size:11px">✓ đã thu hồi</span>';}
-      H+=`<tr><td class="mono">${o.madon}</td><td>${o.kenh}</td><td>${o.ngay}</td><td>${tenSan(o)}${g.lines.length>1?' <span class="sub">+'+(g.lines.length-1)+' SKU</span>':''}</td><td class="r">${slT}</td><td class="r"><span class="sub">—</span></td><td>${sitTag}</td><td><span class="sub">— không cần —</span></td><td>${act}</td></tr>`;
+      var canRecall=(exported&&!hh.thuhoi);var cbHuy=canRecall?`<input type="checkbox" ${hhSelHuy[o.madon]?'checked':''} onchange="hhTickHuy('${o.madon}',this.checked)" style="margin-right:6px">`:'';if(canRecall)hhVisRecall.push(o.madon);
+      H+=`<tr><td class="mono">${cbHuy}${o.madon}</td><td>${o.kenh}</td><td>${o.ngay}</td><td>${tenSan(o)}${g.lines.length>1?' <span class="sub">+'+(g.lines.length-1)+' SKU</span>':''}</td><td class="r">${slT}</td><td class="r"><span class="sub">—</span></td><td>${sitTag}</td><td><span class="sub">— không cần —</span></td><td>${act}</td></tr>`;
       return;
     }
     if(hhF.sit&&hhF.sit!=='hoan')return;
@@ -7892,16 +7898,20 @@ function rHoanHuy(){ ensureHoan(); ensureSonLe(); if(!el('hoanBody'))return;
     });}
   });
   if(!H)H=`<tr><td colspan="9" class="sub" style="text-align:center;padding:14px">Không có đơn khớp bộ lọc. Đơn Haravan bị hủy tự về đây sau mỗi lần kéo; hoặc đánh dấu hoàn thủ công bên dưới.</td></tr>`;
-  el('hoanBody').innerHTML=toggle+alertBanner+bar+manual+
+  el('hoanBody').innerHTML=toggle+alertBanner+bar+barBulk+manual+
    `<div class="card scroll"><table id="tblHoan"><tr><th>Mã đơn<br><span style="font-weight:600;font-size:10.5px;color:#111827">訂單編號</span></th><th>Kênh<br><span style="font-weight:600;font-size:10.5px;color:#111827">管道</span></th><th>Ngày<br><span style="font-weight:600;font-size:10.5px;color:#111827">日期</span></th><th>Sản phẩm<br><span style="font-weight:600;font-size:10.5px;color:#111827">商品</span></th><th class="r">SL đơn<br><span style="font-weight:600;font-size:10.5px;color:#111827">訂單數量</span></th><th class="r">Khách hoàn<br><span style="font-weight:600;font-size:10.5px;color:#111827">退貨數量</span></th><th>Tình huống<br><span style="font-weight:600;font-size:10.5px;color:#111827">情況</span></th><th>Quy trình hoàn<br><span style="font-weight:600;font-size:10.5px;color:#111827">退貨流程</span></th><th>Thao tác<br><span style="font-weight:600;font-size:10.5px;color:#111827">操作</span></th></tr>${H}</table></div>`+
    `<div class="note"><b>Hủy trước xuất:</b> tự nhận khi kéo đơn, không trừ tồn — không cần thao tác. <b>Hủy sau xuất:</b> bấm <b>↩ Thu hồi xuất</b> → cộng trả tồn (cũng làm được ngay tại tab ④). <b>Hoàn (đã giao):</b> tick từng SKU khách trả → nhập SL hoàn → chọn <b>Chờ về → Đang kiểm → Nhập lại kho</b>. SKU không tick = khách giữ. Sơn đã chiết màu khi "Nhập lại" sẽ vào <b>🎨 Kho sơn lẻ</b> (không nhập về base). Hàng hỏng chọn <b>Loại bỏ</b>.</div>`;
 }
-function hhApply(){hhF.sit=v('hhSit');hhF.step=v('hhStep');hhF.stt=v('hhStt');rHoanHuy();}
+function hhApply(){hhF.sit=v('hhSit');hhF.step=v('hhStep');hhF.stt=v('hhStt');hhF.from=v('hhFrom')||'';hhF.to=v('hhTo')||'';rHoanHuy();}
+function hhClearF(){hhF={sit:'',step:'',stt:'',from:'',to:''};rHoanHuy();}
+function hhTickHuy(m,chk){if(chk)hhSelHuy[m]=1;else delete hhSelHuy[m];var e=el('hhSelN');if(e)e.textContent=Object.keys(hhSelHuy).filter(function(x){return hhSelHuy[x];}).length;}
+function hhSelAllHuy(){hhVisRecall.forEach(function(m){hhSelHuy[m]=1;});rHoanHuy();}
+function hhThuHoiBulk(){var ms=Object.keys(hhSelHuy).filter(function(m){return hhSelHuy[m];});if(!ms.length){alert('Chưa tích chọn đơn nào (cột đầu — chỉ đơn Hủy sau xuất chưa thu hồi mới có ô tích).');return;}if(!confirm('Thu hồi xuất kho '+ms.length+' đơn đã chọn?\n• Sơn đã chiết màu → nhập về KHO SƠN LẺ.\n• Hàng khác → cộng trả lại tồn.'))return;ms.forEach(function(m){hhThuHoiCore(m);});hhSelHuy={};save();rHoanHuy();alert('Đã thu hồi xuất '+ms.length+' đơn.');}
 function hhUndo(madon,sku){ ensureHoan();var L=(DATA.hoan[madon]&&DATA.hoan[madon].lines)?DATA.hoan[madon].lines[sku]:null;if(!L)return;var lon=L.sonleDone;if(!confirm('Hoàn tác cho SKU này?\n• '+(lon?'Lon sơn lẻ vừa thêm sẽ bị xoá khỏi Kho sơn lẻ.':'Phiếu nhập trong Xuất–Nhập SX sẽ bị xoá (trừ lại tồn).')+'\n• Quy trình quay về bước "② Đang kiểm tra".'))return;L.step='kiem';hhSync(madon,sku);save();hhKeep(rHoanHuy);}
 function hhKeep(fn){var host=el('hoanBody');var sy=(window.scrollY||0);var ct=null;if(host){var c=host.querySelector('.scroll');if(c)ct=c.scrollTop;}fn();var h2=el('hoanBody');if(h2&&ct!=null){var c2=h2.querySelector('.scroll');if(c2)c2.scrollTop=ct;}try{window.scrollTo(0,sy);}catch(e){}}
 function hhToggle(m){hhExpand[m]=!hhExpand[m];hhKeep(rHoanHuy);}
-function hhThuHoi(madon){ ensureHoan();ensureSonLe();
-  if(!confirm('Thu hồi xuất kho đơn '+madon+'?\n• Sơn đã chiết màu (1kg/mini) → nhập về KHO SƠN LẺ.\n• Hàng khác (sơn lót, thú cưng, sàn, công cụ...) → cộng trả lại tồn.'))return;
+function hhThuHoi(madon){ if(!confirm('Thu hồi xuất kho đơn '+madon+'?\n• Sơn đã chiết màu (1kg/mini) → nhập về KHO SƠN LẺ.\n• Hàng khác (sơn lót, thú cưng, sàn, công cụ...) → cộng trả lại tồn.'))return; hhThuHoiCore(madon); save();if(el('hoanBody'))rHoanHuy();else rXKBanHang(); }
+function hhThuHoiCore(madon){ ensureHoan();ensureSonLe();
   DATA.hoan[madon]=DATA.hoan[madon]||{};DATA.hoan[madon].thuhoi=true;
   idxOf(madon).forEach(function(i){ var o=DATA.orders[i];
     if(isChietRet(o)){ var he=skuHe(o);var qty=Math.max(1,(+o.sl)||1);   // son chiet mau -> Kho son le, KHONG tra ve base (base da tieu hao khi chiet)
@@ -7909,7 +7919,7 @@ function hhThuHoi(madon){ ensureHoan();ensureSonLe();
         DATA.sonLe.push({id:'SL'+Date.now()+Math.floor(Math.random()*900),srcType:'thuhoi',srcMadon:madon,sku:o.sku,ngay:hhTodayISO(),madon:madon,base:he.code,baseTen:he.name||nm(he.code),mau:o.mau,sl:qty,kenh:o.kenh,sonType:he.sonType,trangthai:'ton',nguoi:'',ghichu:'Thu hồi đơn hủy '+madon});
     } else { o.tt='Da huy'; }   // hang thuong -> cong tra lai ton base
   });
-  save();if(el('hoanBody'))rHoanHuy();else rXKBanHang();}
+}
 function hhKeyMatchNx(r,madon,sku){ return (r.srcType==='hoan'&&r.srcMadon===madon&&r.srcSku===sku) || (r.mucdich==='Hoàn nhập lại'&&r.ghichu&&r.ghichu.indexOf('Hoàn SKU '+sku+' · đơn '+madon)>=0); }
 function hhClearLine(madon,sku){
   DATA.nx=(DATA.nx||[]).filter(r=>!hhKeyMatchNx(r,madon,sku));
@@ -8781,10 +8791,19 @@ function kkClearAssign(){ensureKK();var vis={};kkFiltered().forEach(function(p){
 function kkStaffMgr(){ensureKK();var rows=DATA.kkStaff.map((n,i)=>`<tr><td><input value="${(n||'').replace(/"/g,'&quot;')}" onchange="DATA.kkStaff[${i}]=this.value.trim();save()" style="width:100%"></td><td><button class="btn" style="padding:1px 7px;color:var(--red)" onclick="DATA.kkStaff.splice(${i},1);save();kkStaffMgr()">🗑</button></td></tr>`).join('');
   modal(`<div style="padding:14px 18px;border-bottom:1px solid var(--line);font-weight:700">⚙ Danh sách nhân viên kiểm kho</div><div style="padding:16px 18px"><div class="bar"><input id="kkStaffNew" placeholder="Tên nhân viên" style="flex:1"><button class="btn pri" onclick="var x=(el('kkStaffNew').value||'').trim();if(x){kkAddStaff(x);save();kkStaffMgr();}">+ Thêm</button></div><div class="card scroll" style="max-height:300px;margin-top:10px"><table><tr><th>Tên</th><th></th></tr>${rows||'<tr><td colspan=2 class=sub>Chưa có</td></tr>'}</table></div></div><div style="padding:12px 18px;border-top:1px solid var(--line);text-align:right"><button class="btn pri" onclick="closeModal();rKiemkho()">Xong</button></div>`);}
 function kkSet(f,c,val){ensureKK();kkStamp(c);DATA.kk[f][c]=val;
-  if(f==='kk1'||f==='kk2'||f==='kk3'){var fin=kkFinal(c);if(fin.v!=null){DATA.kk.thuc[c]=fin.v;var ti=el('kkthuc_'+c);if(ti)ti.value=fin.v;}rKKBan();return;}
+  if(f==='kk1'||f==='kk2'||f==='kk3'){var fin=kkFinal(c);if(fin.v!=null){DATA.kk.thuc[c]=fin.v;}save();kkUpdRow(c);return;}
   save();kkUpdRow(c);}
-function kkUpdRow(c){var lt=DATA.kk.snap[c]||0;var tc=DATA.kk.thuc[c];var th=(tc!=null&&tc!=='')?Number(tc):'';var diff=(th!=='')?th-lt:'';
-  var de=el('kkdiff_'+c);if(de)de.innerHTML=diff===''?'<span class="sub">—</span>':('<b style="color:'+(diff<0?'var(--red)':(diff>0?'var(--green)':'var(--muted)'))+'">'+(diff>0?'+':'')+num(diff)+'</b>');}
+function kkUpdRow(c){var INPS='width:90px;text-align:right;padding:6px 8px;font-size:13px';
+  var lt=DATA.kk.snap[c]||0;var fin=kkFinal(c);
+  var n1=(DATA.kk.kk1[c]!=null&&DATA.kk.kk1[c]!=='')?Number(DATA.kk.kk1[c]):null,n2=(DATA.kk.kk2[c]!=null&&DATA.kk.kk2[c]!=='')?Number(DATA.kk.kk2[c]):null;
+  var ck12=(n1!=null&&n2!=null)?(n1-n2):'';
+  var tc=DATA.kk.thuc[c];var th=(tc!=null&&tc!=='')?Number(tc):'';var diff=(th!=='')?th-lt:'';
+  var ce=el('kkck_'+c);if(ce)ce.innerHTML=ck12===''?'<span class="sub">—</span>':('<b style="color:'+(ck12!==0?'var(--red)':'var(--green)')+'">'+(ck12>0?'+':'')+num(ck12)+'</b>');
+  var se=el('kkst_'+c);if(se)se.innerHTML=kkStTag(fin.st);
+  var k3=el('kkk3cell_'+c);if(k3){var show=(fin.st==='mismatch'||fin.st==='ok3'||(DATA.kk.kk3[c]!=null&&DATA.kk.kk3[c]!==''));k3.innerHTML=show?('<input id="kkk3_'+c+'" type="number" value="'+(DATA.kk.kk3[c]!=null?DATA.kk.kk3[c]:'')+'" style="'+INPS+(fin.st==='mismatch'?';border:1px solid var(--red)':'')+'" onchange="kkSet(\'kk3\',\''+c+'\',this.value)">'):'<span class="sub">—</span>';}
+  var te=el('kkthuc_'+c);if(te&&document.activeElement!==te)te.value=(tc!=null?tc:'');
+  var de=el('kkdiff_'+c);if(de)de.innerHTML=diff===''?'<span class="sub">—</span>':('<b style="color:'+(diff<0?'var(--red)':(diff>0?'var(--green)':'var(--muted)'))+'">'+(diff>0?'+':'')+num(diff)+'</b>');
+  var row=el('kkrow_'+c);if(row){var dn=!!DATA.kk.done[c];var sel=!!DATA.kk.sel[c];row.style.background=fin.st==='mismatch'?'#fff3ef':(dn?'#e9f7ef':(sel?'#f3f9f4':''));}}
 function kkToggleDone(c){ensureKK();var st=kkFinal(c).st;if(!DATA.kk.done[c]&&st!=='ok'&&st!=='ok3'){alert('Mã này chưa chốt xong (chưa kiểm / đang lệch). Hoàn tất kiểm trước khi xác nhận.');return;}DATA.kk.done[c]=!DATA.kk.done[c];if(!DATA.kk.done[c])delete DATA.kk.done[c];kkStamp(c);save();rKKBan();}
 function kkHide(c){if(!confirm('Ẩn '+c+' khỏi bản kiểm kho?'))return;ensureKK();kkStamp(c);DATA.kk.hide[c]=1;save();rKKBan();}
 function kkUnhide(c){ensureKK();delete DATA.kk.hide[c];save();rKKBan();}
