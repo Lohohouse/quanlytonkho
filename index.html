@@ -8599,20 +8599,24 @@ function rQuatang(){
 
 /* ---- KIỂM KHO ---- */
 let kkSub='chot', kkSub2='nvl', kkThang='', kkF={cat:'',nguoi:'',find:'',tt:'',hide0:false,selOnly:false,showHidden:false};
-function ensureKK(){if(!DATA.kk)DATA.kk={ngayChot:'',snap:{},kk1:{},kk2:{},kk3:{},thuc:{},hide:{},p1:{},p2:{},p3:{},done:{},sel:{},lenh:'',confirmed:false};['snap','kk1','kk2','kk3','thuc','hide','p1','p2','p3','done','sel'].forEach(k=>{if(!DATA.kk[k])DATA.kk[k]={};});if(!DATA.kkStaff)DATA.kkStaff=[];if(!DATA.kkHistory)DATA.kkHistory={};if(!DATA.kk._tsC)DATA.kk._tsC={};if(DATA.kk.ep==null)DATA.kk.ep=DATA.kk.chotTs||0;if(DATA.kk._tsHead==null)DATA.kk._tsHead=DATA.kk.chotTs||0;}
+function ensureKK(){if(!DATA.kk)DATA.kk={ngayChot:'',snap:{},kk1:{},kk2:{},kk3:{},thuc:{},hide:{},p1:{},p2:{},p3:{},done:{},sel:{},lenh:'',confirmed:false};['snap','kk1','kk2','kk3','thuc','hide','p1','p2','p3','done','sel'].forEach(k=>{if(!DATA.kk[k])DATA.kk[k]={};});if(!DATA.kkStaff)DATA.kkStaff=[];if(!DATA.kkHistory)DATA.kkHistory={};if(!DATA.kk._tsC)DATA.kk._tsC={};if(DATA.kk.ep==null)DATA.kk.ep=0;if(DATA.kk._tsHead==null)DATA.kk._tsHead=0;}
 function kkStamp(c){if(!DATA.kk)return;if(!DATA.kk._tsC)DATA.kk._tsC={};DATA.kk._tsC[c]=Date.now();}
 function _kkEmpty(v){return v==null||v==='';}
-/* Gộp số liệu kiểm kho ĐA MÁY: khác epoch (chốt/đóng kỳ) -> bên mới hơn thắng toàn bộ; cùng epoch -> theo từng SKU (ô có giá trị thắng ô trống, cả 2 có thì mới hơn thắng theo dấu thời gian) */
-function mergeKK(A,B){A=A||{};B=B||{};var ea=A.ep||0,eb=B.ep||0;if(ea!==eb)return (eb>ea)?B:A;
-  var PF=['snap','kk1','kk2','kk3','thuc','hide','p1','p2','p3','done','sel'];var out={ep:ea};
+/* Gộp số liệu kiểm kho ĐA MÁY — AN TOÀN (không bao giờ xoá trắng):
+   theo từng SKU, so dấu thời gian _tsC[c]; ts bằng nhau (gồm dữ liệu cũ ts=0) -> hợp nhất, ô CÓ giá trị được giữ;
+   ts khác -> lấy nguyên "bó" của bên MỚI hơn (gồm cả việc đã xoá -> lan truyền đóng kỳ). KHÔNG còn cơ chế epoch ghi đè toàn bộ. */
+function mergeKK(A,B){A=A||{};B=B||{};
+  var PF=['snap','kk1','kk2','kk3','thuc','hide','p1','p2','p3','done','sel'];var out={};
   var ha=A._tsHead||0,hb=B._tsHead||0;var H=hb>=ha?B:A;
   out.ngayChot=(H.ngayChot!=null)?H.ngayChot:((A.ngayChot!=null)?A.ngayChot:B.ngayChot);
-  out.chotTs=(A.chotTs!=null)?A.chotTs:B.chotTs;out.lenh=H.lenh||A.lenh||B.lenh||'';out.confirmed=!!(A.confirmed||B.confirmed);out._tsHead=Math.max(ha,hb);
+  out.chotTs=(A.chotTs!=null)?A.chotTs:B.chotTs;out.lenh=H.lenh||A.lenh||B.lenh||'';out.confirmed=!!(A.confirmed||B.confirmed);
+  out._tsHead=Math.max(ha,hb);out.ep=Math.max(A.ep||0,B.ep||0);
   var i;for(i=0;i<PF.length;i++)out[PF[i]]={};out._tsC={};
-  var codes={};[A,B].forEach(function(X){for(var fi=0;fi<PF.length;fi++){var m=X[PF[fi]];if(m)for(var cc in m)codes[cc]=1;}});
+  var codes={};[A,B].forEach(function(X){for(var fi=0;fi<PF.length;fi++){var m=X[PF[fi]];if(m)for(var cc in m)codes[cc]=1;}if(X._tsC)for(var c2 in X._tsC)codes[c2]=1;});
   for(var c in codes){var at=(A._tsC&&A._tsC[c])||0,bt=(B._tsC&&B._tsC[c])||0;out._tsC[c]=Math.max(at,bt);
-    for(i=0;i<PF.length;i++){var F=PF[i];var av=A[F]?A[F][c]:undefined,bv=B[F]?B[F][c]:undefined;var ae=_kkEmpty(av),be=_kkEmpty(bv);var v;
-      if(ae&&be)continue;else if(ae)v=bv;else if(be)v=av;else v=(bt>=at)?bv:av;if(!_kkEmpty(v))out[F][c]=v;}}
+    if(at===bt){ for(i=0;i<PF.length;i++){var F=PF[i];var av=A[F]?A[F][c]:undefined,bv=B[F]?B[F][c]:undefined;var v=!_kkEmpty(av)?av:bv;if(!_kkEmpty(v))out[F][c]=v;} }
+    else { var W=(at>bt)?A:B; for(i=0;i<PF.length;i++){var F2=PF[i];var wv=W[F2]?W[F2][c]:undefined;if(!_kkEmpty(wv))out[F2][c]=wv;} }
+  }
   return out;}
 function amKK(){return DATA.kk.ngayChot?DATA.kk.ngayChot.slice(0,7):'';}
 function kkMonthSel(){ensureKK();var months=uniq([amKK()].concat(Object.keys(DATA.kkHistory||{})).filter(Boolean)).sort().reverse();return `<select onchange="kkThang=this.value;rKiemkho()" style="font-weight:600"><option value="">● Kỳ hiện tại${amKK()?' ('+amKK()+')':''}</option>`+months.filter(m=>m!==amKK()).map(m=>`<option value="${m}" ${kkThang===m?'selected':''}>Tháng ${m} (đã chốt)</option>`).join('')+`</select>`;}
@@ -8689,7 +8693,9 @@ function kkResetKy(){ ensureKK();
   var cur=DATA.kk.ngayChot||'(chưa chốt)';
   if(!confirm('LÀM MỚI kỳ kiểm kho hiện tại?\nNgày chốt hiện tại: '+cur+'\n\n• Xóa toàn bộ số liệu kiểm kê của kỳ này (tồn lý thuyết đã chốt, số đếm NV1/2/3, xác nhận, lệnh).\n• KHÔNG ảnh hưởng tồn kho, đơn hàng, hay các kỳ đã đóng.'))return;
   var m=amKK();
-  DATA.kk={ngayChot:'',snap:{},kk1:{},kk2:{},kk3:{},thuc:{},hide:{},p1:{},p2:{},p3:{},done:{},sel:{},lenh:'',confirmed:false,_tsC:{},ep:Date.now(),_tsHead:Date.now()};
+  var _old={};['snap','kk1','kk2','kk3','thuc','hide','p1','p2','p3','done','sel'].forEach(function(F){var mm=DATA.kk[F];if(mm)for(var c in mm)_old[c]=1;});
+  var _tsc=DATA.kk._tsC||{};var _now=Date.now();Object.keys(_old).forEach(function(c){_tsc[c]=_now;});
+  DATA.kk={ngayChot:'',snap:{},kk1:{},kk2:{},kk3:{},thuc:{},hide:{},p1:{},p2:{},p3:{},done:{},sel:{},lenh:'',confirmed:false,_tsC:_tsc,ep:(DATA.kk.ep||0),_tsHead:_now};
   if(m && DATA.kkHistory && DATA.kkHistory[m] && confirm('Có 1 kỳ ĐÃ ĐÓNG tháng '+m+' trong lịch sử.\nXóa luôn kỳ đã đóng này? (nếu đây cũng là kỳ test)'))delete DATA.kkHistory[m];
   save(); rKiemkho();
 }
@@ -8836,7 +8842,7 @@ function kkDong(){ ensureKK();var done=Object.keys(DATA.kk.done).filter(c=>DATA.
   done.forEach(function(c){ ['snap','kk1','kk2','kk3','thuc','hide','p1','p2','p3','done','sel'].forEach(function(k){ if(DATA.kk[k]) delete DATA.kk[k][c]; }); });
   var conLai=Object.keys(DATA.kk.snap||{}).length;
   if(!conLai){ DATA.kk={ngayChot:'',snap:{},kk1:{},kk2:{},kk3:{},thuc:{},hide:{},p1:{},p2:{},p3:{},done:{},sel:{},lenh:'',confirmed:false}; }
-  DATA.kk.ep=Date.now();DATA.kk._tsHead=DATA.kk.ep;DATA.kk._tsC={};Object.keys(DATA.kk.snap||{}).forEach(function(c){DATA.kk._tsC[c]=DATA.kk.ep;});
+  DATA.kk._tsC=DATA.kk._tsC||{};var _now=Date.now();done.forEach(function(c){DATA.kk._tsC[c]=_now;});DATA.kk._tsHead=_now;DATA.kk.ep=DATA.kk.ep||0;
   save();alert('Đã đóng kỳ '+done.length+' mã (chỉ mã đã xác nhận). Còn '+conLai+' mã trong bản kiểm để tiếp tục. Các mã khác giữ nguyên. Xuất/nhập sau chốt đã sang kỳ '+ymNext+'.');rKiemkho();
 }
 function inKiemKho(){ ensureKK();var isN=kkSub2==='nvl';var prods=kkFiltered();if(!prods.length){alert('Không có dòng nào để in (theo bộ lọc).');return;}
