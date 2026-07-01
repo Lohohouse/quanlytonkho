@@ -7525,7 +7525,8 @@ function rKKTinhMau(){ var prods=tmProds().sort(function(a,b){return a.code.loca
 }
 function tmTB(code){ var now=new Date(); var f=new Date(now.getTime()-29*86400000).toISOString().slice(0,10),t=now.toISOString().slice(0,10),s=0; (DATA.nx||[]).forEach(function(r){ if(r.code!==code||r.loai!=='xuat')return; var d=(r.ngay||'').slice(0,10); if(d>=f&&d<=t)s+=(+r.sl||0); }); return s/30; }
 var tmView='kho', tmMetric='xuat';
-function tmMonthSum(code,ym,loai){ var s=0; (DATA.nx||[]).forEach(function(r){ if(r.code!==code||r.loai!==loai)return; if((r.ngay||'').slice(0,7)===ym)s+=(+r.sl||0); }); return s; }
+function tmKyRange(ym){ var a=(''+ym).split('-'),y=+a[0],m=+a[1],sy=y,sm=m-1; if(sm<1){sm=12;sy=y-1;} var pad=function(x){return ('0'+x).slice(-2);}; return [sy+'-'+pad(sm)+'-26', y+'-'+pad(m)+'-25']; }
+function tmMonthSum(code,ym,loai){ var w=tmKyRange(ym),s=0; (DATA.nx||[]).forEach(function(r){ if(r.code!==code||r.loai!==loai)return; var d=(r.ngay||'').slice(0,10); if(d>=w[0]&&d<=w[1])s+=(+r.sl||0); }); return s; }
 function rTonTMThang(){ var prods=tmProds().sort(function(a,b){return a.code.localeCompare(b.code);});
   var now=new Date(),months=[]; for(var i=5;i>=0;i--){ var d=new Date(now.getFullYear(),now.getMonth()-i,1); months.push(d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)); }
   var loai=tmMetric; var hdr=months.map(function(m){return '<th class="r">T'+(+m.slice(5))+'/'+m.slice(2,4)+'</th>';}).join('');
@@ -7538,7 +7539,7 @@ function rTonTMThang(){ var prods=tmProds().sort(function(a,b){return a.code.loc
      <button class="btn${tmMetric==='nhap'?' pri':''}" onclick="tmMetric='nhap';rTonkho()">Nhập (mua về)</button>
      <div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblTMth','Tinh mau theo thang')">⬇ Excel</button></div>
    <div class="card scroll"><table id="tblTMth" style="width:100%"><tr><th>Mã</th><th>Tên</th>${hdr}<th class="r">Tổng</th></tr>${rows}${totRow}</table></div>
-   <div class="note">So sánh <b>${tmMetric==='xuat'?'lượng SỬ DỤNG':'lượng NHẬP (mua về)'}</b> tinh màu theo <b>6 tháng gần nhất</b> (đơn vị lon). Cột <b>Tổng</b> = cộng 6 tháng của mỗi màu; hàng <b>TỔNG</b> = cộng tất cả màu trong tháng. Số liệu lấy từ các phiếu đã ghi (Xuất–Nhập SX).</div>`;
+   <div class="note">So sánh <b>${tmMetric==='xuat'?'lượng SỬ DỤNG':'lượng NHẬP (mua về)'}</b> tinh màu theo <b>6 kỳ gần nhất</b> (mỗi cột = 1 kỳ: 26 tháng trước → 25, đồng bộ với bảng tồn; đơn vị lon). Cột <b>Tổng</b> = cộng 6 kỳ của mỗi màu; hàng <b>TỔNG</b> = cộng tất cả màu trong kỳ. Số liệu lấy từ các phiếu đã ghi (Xuất–Nhập SX).</div>`;
 }
 function tmDau(code){ var r=DATA.ton.find(function(x){return x.code===code;}); return r?(+r.dk||0):0; }
 function tmSetDau(code,val){ var now=Date.now(),r=DATA.ton.find(function(x){return x.code===code;}); if(r){r.dk=Number(val)||0;r._ts=now;} else DATA.ton.push({code:code,dk:Number(val)||0,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0,_ts:now}); save(); rTonkho(); }
