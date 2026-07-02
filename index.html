@@ -8312,7 +8312,9 @@ function xkSaveManual(){
 function xkDelManual(i){var o=DATA.orders[i];if(!o)return;if(!o._manual){alert('Chỉ xóa được đơn nhập tay.');return;}if(!confirm('Xóa dòng đơn nhập tay này?\n'+o.madon+' · '+o.sku+' · SL '+o.sl))return;DATA.orders.splice(i,1);save();if(typeof xkDraw==='function')xkDraw();else rXKBanHang();}
 function xkSelAll(val){ if(!val){xkSel={};} else { ordsFiltered().forEach(g=>{if(g.o.tt!=='Da xuat'&&g.o.tthd==='giao')xkSel[g.madon]=true;}); } xkDraw(); }
 function xkClearSel(){xkSel={};xkDraw();}
-function xkConfirm(madon){var ids=idxOf(madon);if(!ids.length)return;var o0=DATA.orders[ids[0]];if(o0.tt==='Da xuat')return;if(o0.tthd!=='giao'){alert('Chỉ xuất được đơn đã có ĐVVC.');return;}var d=dotNow();var ct=Date.now();ids.forEach(i=>{DATA.orders[i].tt='Da xuat';DATA.orders[i].dot=d;DATA.orders[i]._ct=ct;});delete xkSel[madon];save();xkBHSub='xuat';rXKBanHang();}
+function xkConfirm(madon){var ids=idxOf(madon);if(!ids.length)return;var o0=DATA.orders[ids[0]];if(o0.tt==='Da xuat')return;if(o0.tthd!=='giao'){alert('Chỉ xuất được đơn đã có ĐVVC.');return;}var d=dotNow();var ct=Date.now();ids.forEach(i=>{DATA.orders[i].tt='Da xuat';DATA.orders[i].dot=d;DATA.orders[i]._ct=ct;});
+  try{ var _gl=giftFor(DATA.orders[ids[0]]); ids.forEach(function(i){ DATA.orders[i].giftLock=_gl; }); }catch(e){}   // KHOÁ quà lúc xuất -> không đổi khi sau này tạm ngưng/sửa chương trình
+  delete xkSel[madon];save();xkBHSub='xuat';rXKBanHang();}
 function xkConfirmSel(){var ms=Object.keys(xkSel).filter(m=>xkSel[m]);var ok=ms.filter(m=>{var ids=idxOf(m);return ids.length&&DATA.orders[ids[0]].tthd==='giao'&&DATA.orders[ids[0]].tt!=='Da xuat';});if(!ok.length){alert('Chưa chọn đơn hợp lệ (tick ô vuông). Chỉ tick được đơn Đã có ĐVVC, chưa xuất.');return;}var d=dotNow();var ct=Date.now();ok.forEach(m=>idxOf(m).forEach(i=>{DATA.orders[i].tt='Da xuat';DATA.orders[i].dot=d;DATA.orders[i]._ct=ct;}));xkSel={};save();alert('Đã xuất kho '+ok.length+' đơn (đợt '+d+').');xkBHSub='xuat';rXKBanHang();}
 function keoDonHaravan(){ if(!SYNC.url){alert('Chưa bật đồng bộ. Kéo đơn chạy tự động phía Google. Mở ô ☁ góc trái để cấu hình.');return;} syncBadge('loading'); var u=SYNC.url+(SYNC.url.indexOf('?')>=0?'&':'?')+'action=keo'; fetch(u).then(function(r){return r.json();}).then(function(j){ if(j&&j.ok){ syncPull(function(ok){ try{seedHoan();}catch(e){} refreshAllPanels(); var ad=(j.added||0),up=(j.updated||0); alert('✓ Kéo đơn từ Haravan xong!\n• Đơn/dòng mới: '+ad+'\n• Cập nhật trạng thái: '+up+'\nĐơn mới nhất đã đưa lên đầu danh sách.'); }); } else { syncBadge('err'); alert('Kéo đơn lỗi: '+((j&&j.msg)||'không rõ')); } }).catch(function(e){ syncBadge('err'); alert('Không gọi được kéo đơn (kiểm tra mạng/đồng bộ): '+e); }); }
 function inPhieu(){
@@ -8554,13 +8556,17 @@ function ensureGifts(){ if(!DATA.gifts)DATA.gifts=[];
 var _opCacheV=-1,_opCache=null;
 function orderProds(madon){ if(_opCacheV!==_dataVer){ _opCache={}; (DATA.orders||[]).forEach(function(x){ var m=_opCache[x.madon]||(_opCache[x.madon]={skus:{},cats:{}}); var he=skuHe(x); var codes=he.isBase?[he.code]:explode(he.code,1).map(function(c){return c.code;}); codes.push(x.sku); codes.forEach(function(c){ if(!c)return; m.skus[c]=1; var p=P(c); if(p&&p.ck)m.cats[p.ck]=1; }); }); _opCacheV=_dataVer; } return _opCache[madon]||{skus:{},cats:{}}; }
 function inGioWindow(o,g){ if(!g.gioTu||!g.gioDen)return true; var t=o.gio||''; if(!t)return true; if(g.gioTu<=g.gioDen)return t>=g.gioTu&&t<=g.gioDen; return t>=g.gioTu||t<=g.gioDen; }
-function giftFor(o){ ensureGifts(); var out=[];var t=+o.tien||0;
+function giftFor(o){ ensureGifts();
+  if(o.giftLock!=null){ var _lk=o.giftLock.slice(); var _rm0=(DATA.giftRemoved&&DATA.giftRemoved[o.madon])||[]; return _rm0.length?_lk.filter(function(x){return _rm0.indexOf(x.sku)<0;}):_lk; }
+  var out=[];var t=+o.tien||0;
   DATA.gifts.forEach(g=>{ if(g.tt!=='Đang chạy')return;
-    if(g.tu&&o.ngay&&o.ngay<g.tu)return; if(g.den&&o.ngay&&o.ngay>g.den)return; if(!inGioWindow(o,g))return;
+    var _og=o.gio||'';
+    if(g.tu&&o.ngay){ if(_og&&g.gioTu){ if((o.ngay+' '+_og)<(g.tu+' '+g.gioTu))return; } else if(o.ngay<g.tu)return; }
+    if(g.den&&o.ngay){ if(_og&&g.gioDen){ if((o.ngay+' '+_og)>(g.den+' '+g.gioDen))return; } else if(o.ngay>g.den)return; }
     var _nc=(g.incCats||[]).length+(g.incSkus||[]).length+(g.excCats||[]).length+(g.excSkus||[]).length;
     if(_nc){ var op=orderProds(o.madon);
       if(((g.incCats||[]).length||(g.incSkus||[]).length) && !((g.incCats||[]).some(function(c){return op.cats[c];})||(g.incSkus||[]).some(function(s){return op.skus[s];})))return;
-      if((g.excCats||[]).some(function(c){return op.cats[c];})||(g.excSkus||[]).some(function(s){return op.skus[s];}))return; }
+      if((g.excCats||[]).length||(g.excSkus||[]).length){ var _hasElig=Object.keys(op.cats).some(function(c){return (g.excCats||[]).indexOf(c)<0;}); if(!(g.excCats||[]).length&&(g.excSkus||[]).length)_hasElig=Object.keys(op.skus).some(function(s){return (g.excSkus||[]).indexOf(s)<0;}); if(!_hasElig)return; } }
     (g.tiers||[]).forEach(tr=>{ if(tr.nguon!=='Tự áp')return; if(!(tr.kenhs||[]).includes(o.kenh))return;
       var lo=tienNum(tr.from),hi=tienNum(tr.to);
       if(t>=lo&&(hi===Infinity||t<hi))(tr.items||[]).forEach(it=>{if(it.sku)out.push({sku:it.sku,sl:it.sl||1,ten:g.ten,nguon:'Tự áp'});});
@@ -8571,6 +8577,13 @@ function giftFor(o){ ensureGifts(); var out=[];var t=+o.tien||0;
   return out;
 }
 function delGiftFromOrder(madon,sku){ if(!confirm('Xóa quà TỰ ÁP "'+sku+'" khỏi đơn '+madon+'?\n(Quà kéo từ sàn không xóa được.)'))return; DATA.giftRemoved=DATA.giftRemoved||{}; (DATA.giftRemoved[madon]=DATA.giftRemoved[madon]||[]).push(sku); save(); xkDraw(); }
+function khoaQuaTatCa(){ ensureGifts();
+  var nCT=DATA.gifts.filter(function(g){return g.tt==='Đang chạy';}).length;
+  if(!confirm('KHOÁ quà cho TẤT CẢ đơn ĐÃ XUẤT theo '+nCT+' chương trình ĐANG CHẠY hiện tại?\n\n• Mỗi đơn đã xuất sẽ cố định quà = đúng chương trình đang chạy khớp với đơn.\n• Sau này tạm ngưng / sửa / xoá chương trình sẽ KHÔNG đổi quà các đơn này.\n• Đơn không khớp chương trình đang chạy nào → không có quà Tự áp (quà 0đ từ sàn vẫn giữ).\n\nChỉ nên chạy 1 lần.'))return;
+  var byMadon={}; DATA.orders.forEach(function(o,i){ if(o.tt!=='Da xuat')return; (byMadon[o.madon]=byMadon[o.madon]||[]).push(i); });
+  var n=0,nQ=0;
+  Object.keys(byMadon).forEach(function(m){ var ids=byMadon[m]; ids.forEach(function(i){ delete DATA.orders[i].giftLock; }); var gl=giftFor(DATA.orders[ids[0]]); ids.forEach(function(i){ DATA.orders[i].giftLock=gl.slice(); }); n++; if(gl&&gl.length)nQ++; });
+  save(); if(typeof rGift==='function')rGift(); alert('✓ Đã KHOÁ quà cho '+n+' đơn đã xuất ('+nQ+' đơn có quà Tự áp). Từ nay quà các đơn này cố định, không đổi khi sửa/tạm ngưng chương trình.'); }
 function gStateTag(tt){var m={'Nháp':['Nháp / chưa kích hoạt','t-warn'],'Đang chạy':['Đang chạy','t-ok'],'Tạm dừng':['Tạm ngưng','t-red']}[tt]||['Nháp','t-warn'];return `<span class="tag ${m[1]}">${m[0]}</span>`;}
 function rGift(){
   ensureGifts();
@@ -8594,7 +8607,7 @@ function rGift(){
   el('giftBody').innerHTML=`
   <div class="note" style="background:#eef6ff;border-color:#b9d4f0"><b>Khi nào cần lập chương trình?</b> Chỉ cần cho quà <b>Tự áp</b> (quà KHÔNG có sẵn trong đơn → hệ thống tự thêm theo bậc giá). Quà <b>Giá 0đ từ sàn</b> (Shopee/TikTok đã gắn sẵn) thì <b>không cần lập gì</b> — kéo đơn về là dòng 0đ tự thành Quà, hiện luôn ở ④.</div>
   <div class="tabs2" style="margin-top:8px">${kenhs.map(k=>`<button class="${giftKenh===k?'on':''}" onclick="giftKenh='${k}';rGift()">${k}</button>`).join('')}</div>
-  <div class="bar"><button class="btn pri" onclick="giftAdd()">+ Thêm chương trình 新增活動</button><div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblGift','Qua tang')">⬇ Excel 匯出</button></div>
+  <div class="bar"><button class="btn pri" onclick="giftAdd()">+ Thêm chương trình 新增活動</button><button class="btn" onclick="khoaQuaTatCa()" title="Cố định quà cho MỌI đơn đã xuất theo chương trình đang chạy — chạy 1 lần">🔒 Khoá quà đơn đã xuất</button><div class="sp"></div><button class="btn gr" onclick="exportXLSX('tblGift','Qua tang')">⬇ Excel 匯出</button></div>
   <div class="card scroll">${h}</div>
   <div class="note"><b>Cấu trúc:</b> Chương trình = Tên + Từ/Đến ngày. Mỗi <b>bậc giá</b> có riêng: khoảng giá <b>từ–đến</b>, <b>Nguồn</b> (Tự áp / Giá 0 từ sàn) và <b>Kênh</b> áp dụng.<br>
   <b>Khoảng giá:</b> áp khi <b>Từ ≤ tiền khách trả &lt; Đến</b> (Đến KHÔNG bao gồm). VD bậc 199.000–399.000 = từ 199k đến dưới 399k; muốn "399k trở lên" thì bậc sau đặt Từ=399.000, Đến=∞.<br>
