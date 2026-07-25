@@ -7476,9 +7476,10 @@ function computeTonMonth(mon){
     var _pin=(DATA.tonKy&&DATA.tonKy[c]);
     var cpts=(DATA.tonPts&&DATA.tonPts[c]!=null)?DATA.tonPts[c]:gStart;
     var inChot=chotDone&&DATA.kk.snap[c]!=null;
-    var cm=_pin?DATA.tonKy[c]:((!inChot)?nowKy:glob);   // FIX: mã chưa gắn kỳ & chưa vào chốt -> thuộc kỳ hiện tại theo ngày (tránh kẹt kỳ cũ khiến Theo dõi tồn bỏ sót mã mới)
-    if(ym===cm){ meta[c]={st:cpts,en:(inChot?chotTs:Date.now()),seed:true,dauTrong:false,state:inChot?'closing':'open'}; }
-    else if(inChot&&ym===_nextYm(cm)){ meta[c]={st:chotTs,en:Date.now(),seed:false,dauTrong:true,state:'pending'}; }
+    var _closing=inChot&&chotTs>cpts;   // FIX: chỉ coi là "đang đóng kỳ" khi mốc chốt NẰM SAU đầu kỳ; mốc chốt cũ/trùng đầu kỳ = xem như kỳ đang mở (không co khung về rỗng, không ẩn số bán)
+    var cm=_pin?DATA.tonKy[c]:((!_closing)?nowKy:glob);   // mã chưa gắn kỳ & chưa vào chốt thật -> thuộc kỳ hiện tại theo ngày
+    if(ym===cm){ meta[c]={st:cpts,en:(_closing?chotTs:Date.now()),seed:true,dauTrong:false,state:_closing?'closing':'open'}; }
+    else if(_closing&&ym===_nextYm(cm)){ meta[c]={st:chotTs,en:Date.now(),seed:false,dauTrong:true,state:'pending'}; }
   });
   var t={};
   function ini(c){ if(!t[c])t[c]={dk:0,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0}; return t[c]; }
@@ -7767,7 +7768,7 @@ function nxPurAdd(){var v=(el('nxPurNew').value||'').trim();if(!v)return;if(DATA
 function nxDel(i){if(!confirm('Xoá phiếu này?'))return;DATA.nx.splice(i,1);save();rNhapxuat();}
 
 /* ---- XUẤT KHO ---- */
-let xkSub='banhang', xkBHSub='keo', xkSel={}, xkDotSet={}, xkExpand={};
+let xkSub='banhang', xkBHSub='keo', xkSel={}, xkDotSet={}, xkExpand={}, xkDotFrom='', xkDotTo='';
 let xkF={kenh:'',thang:'',ngay:'',tuNgay:'',denNgay:'',dvvc:'',ttx:'',tthd:'',mau:'',find:''};
 let xkHideDone=true, xkChiet=false, xkChietType='son1kg', xkChietReqOnly=false, xkManualOnly=false, xkAllowNoVC=false;
 function isChietReq(o){return !!(o&&(o._chiet|| /chietmau/i.test(o.sku||'')));}   // don chiet mau theo yeu cau — bam theo SKU GOC nen giu dau hieu sau khi doi SKU
@@ -8129,24 +8130,19 @@ function rXKBanHang(){
 }
 function fmtDM(d){var p=(d||'').split(' ')[0].split('-');return p.length>=3?(p[2]+'/'+p[1]):d;}
 function dotChips(){
-  var rows=xkFilter().filter(({o})=>o.tt==='Da xuat'&&o.dot);
-  var hasDF=xkF.tuNgay||xkF.denNgay||xkF.thang||xkF.ngay;     // có lọc ngày/tháng?
-  if(!hasDF){ var today=dotNow().split(' ')[0]; rows=rows.filter(({o})=>(o.ngay||o.dot.split(' ')[0])===today); }  // mặc định: chỉ HÔM NAY
-  if(!rows.length)return '';
-  var byDay={}; rows.forEach(({o})=>{ var d=(o.dot.indexOf(' ')>=0)?o.dot.split(' ')[0]:(o.ngay||''); (byDay[d]=byDay[d]||{})[o.dot]=1; });
+  var allEx=DATA.orders.filter(function(o){return o.tt==='Da xuat'&&o.dot;});
+  if(!allEx.length)return '';
+  var today=dotNow().split(' ')[0];
+  var fromEff=xkDotFrom||today, toEff=xkDotTo||today;
+  var byDay={}; allEx.forEach(function(o){ var d=(o.dot.indexOf(' ')>=0)?o.dot.split(' ')[0]:(o.ngay||''); if(!d||d<fromEff||d>toEff)return; (byDay[d]=byDay[d]||{})[o.dot]=1; });
   var days=Object.keys(byDay).sort().reverse();
-  var H='<div class="bar" style="margin-top:-2px;gap:8px;flex-wrap:wrap;align-items:center"><span class="sub" style="font-weight:600">Đợt in / 出貨批次:</span>';
-  days.forEach(function(d){
-    var times=Object.keys(byDay[d]).sort().reverse();
-    H+='<span style="display:inline-flex;gap:5px;align-items:center;flex-wrap:wrap;background:#eef2f8;border-radius:9px;padding:3px 8px"><span class="sub" style="font-weight:700;color:#334155">'+fmtDM(d)+'</span>';
-    times.forEach(function(dot){ var t=(dot.indexOf(' ')>=0)?dot.split(' ')[1]:dot; H+='<span class="tag '+(xkDotSet[dot]?'t-info':'')+'" style="cursor:pointer;border:1px solid var(--line2)" onclick="toggleDot(\''+dot+'\')">'+(xkDotSet[dot]?'☑':'☐')+' '+t+'</span>'; });
-    H+='</span>';
-  });
-  H+='<span class="sub">(mặc định: hôm nay · lọc ngày để xem đợt cũ · không tick = tất cả / 預設今日，篩選日期看舊批次)</span></div>';
-  return H;
+  var chips=days.map(function(d){ var times=Object.keys(byDay[d]).sort().reverse();
+    return '<span style="display:inline-flex;gap:4px;align-items:center;background:#eef2f8;border-radius:8px;padding:2px 6px"><span class="sub" style="font-weight:700;color:#334155">'+fmtDM(d)+'</span>'+times.map(function(dot){var t=(dot.indexOf(' ')>=0)?dot.split(' ')[1]:dot;return '<span class="tag '+(xkDotSet[dot]?'t-info':'')+'" style="cursor:pointer;border:1px solid var(--line2)" onclick="toggleDot(\''+dot+'\')">'+(xkDotSet[dot]?'☑':'☐')+' '+t+'</span>';}).join('')+'</span>';
+  }).join('');
+  return '<div class="bar" style="margin-top:-2px;gap:6px;flex-wrap:wrap;align-items:center"><span class="sub" style="font-weight:600">Đợt in:</span><span class="sub">Từ</span><input type="date" value="'+fromEff+'" onchange="xkDotFrom=this.value;xkDotSet={};rXKBanHang()" style="width:132px"><span class="sub">đến</span><input type="date" value="'+toEff+'" onchange="xkDotTo=this.value;xkDotSet={};rXKBanHang()" style="width:132px">'+chips+'<span class="sub" style="font-size:11px">tick đợt để lọc · không tick = cả khoảng ngày</span></div>';
 }
 function toggleDot(d){xkDotSet[d]=!xkDotSet[d];if(!xkDotSet[d])delete xkDotSet[d];rXKBanHang();}
-function dotPass(o){var keys=Object.keys(xkDotSet);return keys.length===0||xkDotSet[o.dot];}
+function dotPass(o){ var keys=Object.keys(xkDotSet); if(keys.length)return !!xkDotSet[o.dot]; var hasDF=xkF.tuNgay||xkF.denNgay||xkF.thang||xkF.ngay; if(hasDF)return true; var today=dotNow().split(' ')[0]; var fromEff=xkDotFrom||today,toEff=xkDotTo||today; var d=(o.dot&&o.dot.indexOf(' ')>=0)?o.dot.split(' ')[0]:(o.ngay||''); return d>=fromEff&&d<=toEff; }
 function xkApply(){xkF.kenh=v('xkKenh');xkF.thang=v('xkThang');xkF.tuNgay=v('xkTu');xkF.denNgay=v('xkDen');xkF.dvvc=v('xkDvvc');xkF.tthd=v('xkTThd');xkF.ttx=v('xkTTX');xkF.mau=v('xkMau');xkF.find=v('xkFind');xkDraw();}
 function xkClearFilter(){xkF={kenh:'',thang:'',ngay:'',tuNgay:'',denNgay:'',dvvc:'',ttx:'',tthd:'',mau:'',find:''};xkDotSet={};rXKBanHang();}   // FIX: nut Xoa loc -> ve mac dinh (khong loc -> dot hom nay)
 function v(id){var e=el(id);return e?e.value:'';}
@@ -8425,7 +8421,7 @@ function inBanGiao(){
 }
 
 /* ======== ⑤ BÀN GIAO VẬN CHUYỂN / 交接 ======== */
-var bgOrderSel={}, bgTab='all', bgShowDone=false, bgF={month:'',from:'',to:'',dvvc:'',find:'',dot:''};
+var bgOrderSel={}, bgTab='all', bgShowDone=false, bgF={month:'',from:'',to:'',dvvc:'',find:'',dots:{}};
 var BG_TABS=[['all','Tất cả'],['GHN','GHN'],['J&T','J&T'],['SPX','SPX'],['VTP','Viettel Post'],['Khác','Khác']];
 function bgGroup(dv){var d=(dv||'').toLowerCase();
   if(d.indexOf('ghn')>=0||d.indexOf('giao hàng nhanh')>=0||d.indexOf('giao hang nhanh')>=0)return 'GHN';
@@ -8434,19 +8430,38 @@ function bgGroup(dv){var d=(dv||'').toLowerCase();
   if(d.indexOf('vtp')>=0||d.indexOf('viettel post')>=0)return 'VTP';
   return 'Khác';
 }
+var bgDotFrom='', bgDotTo='';
+function bgDotClearDays(){ bgDotFrom=''; bgDotTo=''; bgDotModal(); }
+function bgDotOne(cb){ if(!bgF.dots)bgF.dots={}; var dt=cb.getAttribute('data-dot'); if(cb.checked)bgF.dots[dt]=true; else delete bgF.dots[dt]; }
+function bgDotDayAll(cb){ if(!bgF.dots)bgF.dots={}; var day=cb.getAttribute('data-day'); var on=cb.checked; var list=document.querySelectorAll('.bgdotcb'); for(var i=0;i<list.length;i++){ var x=list[i]; if(x.getAttribute('data-day')===day){ x.checked=on; var dt=x.getAttribute('data-dot'); if(on)bgF.dots[dt]=true; else delete bgF.dots[dt]; } } }
+function bgDotModal(){ if(!bgF.dots)bgF.dots={};
+  var all=bgOrders().filter(function(o){return !o._bg;});
+  var dotsAll=uniq(all.map(function(o){return o.dot||'';}).filter(Boolean)).sort().reverse();
+  if(!dotsAll.length){alert('Chưa có đợt xuất nào để chọn.');return;}
+  var dayOf=function(dt){return (dt.indexOf(' ')>=0)?dt.split(' ')[0]:dt;};
+  var dots=dotsAll.filter(function(dt){var d=dayOf(dt); if(bgDotFrom&&d<bgDotFrom)return false; if(bgDotTo&&d>bgDotTo)return false; return true;});
+  var byDay={}; dots.forEach(function(dt){var d=dayOf(dt);(byDay[d]=byDay[d]||[]).push(dt);});
+  var days=Object.keys(byDay).sort().reverse();
+  var body=days.map(function(d){ var ts=byDay[d].slice().sort().reverse(); var allOn=ts.every(function(dt){return !!bgF.dots[dt];});
+    return '<div style="border:1px solid var(--line2);border-radius:8px;padding:6px 8px;margin-bottom:6px"><label style="display:flex;align-items:center;gap:6px;font-weight:700"><input type="checkbox" data-day="'+d+'" '+(allOn?'checked':'')+' onchange="bgDotDayAll(this)"> '+fmtDM(d)+' <span class="sub" style="font-weight:500">('+ts.length+' đợt)</span></label><div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;padding-left:22px">'+ts.map(function(dt){var t=(dt.indexOf(' ')>=0)?dt.split(' ')[1]:dt;return '<label class="tag" style="cursor:pointer;border:1px solid var(--line2)"><input type="checkbox" class="bgdotcb" data-day="'+d+'" data-dot="'+dt+'" style="margin-right:4px" '+(bgF.dots[dt]?'checked':'')+' onchange="bgDotOne(this)">'+t+'</label>';}).join('')+'</div></div>';
+  }).join('');
+  var h='<div style="padding:14px 16px;min-width:460px;max-width:580px"><div style="font-weight:700;font-size:15px;margin-bottom:8px">📅 Chọn đợt xuất — tick nhiều đợt / cả ngày</div><div class="bar" style="margin-bottom:8px"><span class="sub">Từ</span><input type="date" value="'+bgDotFrom+'" onchange="bgDotFrom=this.value;bgDotModal()" style="width:140px"><span class="sub">đến</span><input type="date" value="'+bgDotTo+'" onchange="bgDotTo=this.value;bgDotModal()" style="width:140px"><button class="btn" onclick="bgDotClearDays()">Bỏ lọc ngày</button></div><div class="card scroll" style="max-height:340px">'+body+'</div><div class="bar" style="margin-top:10px;justify-content:space-between"><button class="btn" style="color:var(--red)" onclick="bgF.dots={};bgDotModal()">🗑 Bỏ chọn hết</button><button class="btn pri" onclick="closeModal();rBanGiao()">✓ Xong</button></div></div>';
+  modal(h);
+}
+function bgToggleDot(d){ if(!bgF.dots)bgF.dots={}; if(bgF.dots[d])delete bgF.dots[d]; else bgF.dots[d]=true; bgOrderSel={}; rBanGiao(); }
 function bgMatch(o){ var ng=(o.ngay||'').slice(0,10);
   if(bgF.month && ng.slice(0,7)!==bgF.month)return false;
   if(bgF.from && ng<bgF.from)return false;
   if(bgF.to && ng>bgF.to)return false;
   if(bgF.dvvc && (o.dvvc||'(chưa có ĐVVC)')!==bgF.dvvc)return false;
-  if(bgF.dot && (o.dot||'')!==bgF.dot)return false;
+  var _ds=bgF.dots||{}; if(Object.keys(_ds).length && !_ds[o.dot||''])return false;
   if(bgF.find){var q=bgF.find.toLowerCase();if((((o.madon||'')+' '+(o.vd||'')+' '+(o.kenh||'')).toLowerCase()).indexOf(q)<0)return false;}
   return true;
 }
 function bgInTab(o){return bgTab==='all'||bgGroup(o.dvvc)===bgTab;}
 function bgShownList(){return bgOrders().filter(function(o){return !o._bg && bgMatch(o) && bgInTab(o);});}
-function bgApplyF(){ bgF.month=v('bgfMonth')||''; bgF.from=v('bgfFrom')||''; bgF.to=v('bgfTo')||''; bgF.dvvc=v('bgfDvvc')||''; bgF.dot=v('bgfDot')||''; bgF.find=v('bgfFind')||''; bgOrderSel={}; rBanGiao(); }
-function bgClearF(){ bgF={month:'',from:'',to:'',dvvc:'',find:'',dot:''}; bgOrderSel={}; rBanGiao(); }
+function bgApplyF(){ bgF.month=v('bgfMonth')||''; bgF.from=v('bgfFrom')||''; bgF.to=v('bgfTo')||''; bgF.dvvc=v('bgfDvvc')||''; bgF.find=v('bgfFind')||''; bgOrderSel={}; rBanGiao(); }
+function bgClearF(){ bgF={month:'',from:'',to:'',dvvc:'',find:'',dots:{}}; bgOrderSel={}; rBanGiao(); }
 function bgSetTab(t){ bgTab=t; bgOrderSel={}; rBanGiao(); }
 function bgTodayISO(){return new Date().toISOString().slice(0,10);}
 function bgOrders(){var seen={},out=[];DATA.orders.forEach(function(o){if(o.tt!=='Da xuat')return;if(seen[o.madon])return;seen[o.madon]=1;out.push(o);});return out;}
@@ -8478,7 +8493,7 @@ function rBanGiao(){
   var picked=all.filter(function(o){return !!o._bg;});
   var afterF=unpicked.filter(bgMatch);
   var shown=afterF.filter(bgInTab);
-  var anyF=bgF.month||bgF.from||bgF.to||bgF.dvvc||bgF.find||bgF.dot;
+  var anyF=bgF.month||bgF.from||bgF.to||bgF.dvvc||bgF.find||Object.keys(bgF.dots||{}).length;
   var nSotOld=unpicked.filter(function(o){return (o.ngay||'').slice(0,10)<today;}).length;
   var nSel=Object.keys(bgOrderSel).length;
   var gc={'all':afterF.length,'GHN':0,'J&T':0,'SPX':0,'VTP':0,'Khác':0};
@@ -8489,8 +8504,8 @@ function rBanGiao(){
   var optM='<option value="">Tháng: tất cả</option>'+months.map(function(m){return '<option value="'+m+'"'+(bgF.month===m?' selected':'')+'>Tháng '+m+'</option>';}).join('');
   var optD='<option value="">ĐVVC: tất cả</option>'+carriers.map(function(c){return '<option value="'+(c||'').replace(/"/g,'&quot;')+'"'+(bgF.dvvc===c?' selected':'')+'>'+c+'</option>';}).join('');
   var dots=uniq(unpicked.map(function(o){return o.dot||'';}).filter(Boolean)).sort().reverse();
-  var optDot='<option value="">Đợt xuất: tất cả</option>'+dots.map(function(d){return '<option value="'+d.replace(/"/g,'&quot;')+'"'+(bgF.dot===d?' selected':'')+'>'+d+'</option>';}).join('');
-  var fbar=`<div class="bar"><select id="bgfMonth" onchange="bgApplyF()">${optM}</select><span class="sub">Từ</span><input id="bgfFrom" type="date" value="${bgF.from}" onchange="bgApplyF()" style="width:138px"><span class="sub">đến</span><input id="bgfTo" type="date" value="${bgF.to}" onchange="bgApplyF()" style="width:138px"><select id="bgfDvvc" onchange="bgApplyF()">${optD}</select><select id="bgfDot" onchange="bgApplyF()" title="Lọc theo đợt xuất kho">${optDot}</select><input id="bgfFind" placeholder="🔍 Tìm mã đơn / mã vận đơn / kênh" value="${(bgF.find||'').replace(/"/g,'&quot;')}" onchange="bgApplyF()" style="flex:1;min-width:160px"><button class="btn" onclick="bgClearF()">✗ Xóa lọc</button><label class="sub" style="display:inline-flex;align-items:center;gap:5px"><input type="checkbox" ${bgShowDone?'checked':''} onchange="bgShowDone=this.checked;rBanGiao()"> Xem đơn đã bàn giao</label></div>`;
+  var dotBtn='<button class="btn'+(Object.keys(bgF.dots||{}).length?' pri':'')+'" onclick="bgDotModal()" title="Chọn nhiều đợt xuất (nhiều ngày)">📅 Đợt xuất'+(Object.keys(bgF.dots||{}).length?(' ('+Object.keys(bgF.dots).length+')'):'')+' ▾</button>';
+  var fbar=`<div class="bar"><select id="bgfMonth" onchange="bgApplyF()">${optM}</select><span class="sub">Từ</span><input id="bgfFrom" type="date" value="${bgF.from}" onchange="bgApplyF()" style="width:138px"><span class="sub">đến</span><input id="bgfTo" type="date" value="${bgF.to}" onchange="bgApplyF()" style="width:138px"><select id="bgfDvvc" onchange="bgApplyF()">${optD}</select>${dotBtn}<input id="bgfFind" placeholder="🔍 Tìm mã đơn / mã vận đơn / kênh" value="${(bgF.find||'').replace(/"/g,'&quot;')}" onchange="bgApplyF()" style="flex:1;min-width:160px"><button class="btn" onclick="bgClearF()">✗ Xóa lọc</button><label class="sub" style="display:inline-flex;align-items:center;gap:5px"><input type="checkbox" ${bgShowDone?'checked':''} onchange="bgShowDone=this.checked;rBanGiao()"> Xem đơn đã bàn giao</label></div>`;
   var bar=`<div class="bar">
     <b class="sub">Đang xem: <b>${shown.length}</b> đơn${anyF?' (đã lọc)':''}${nSotOld?` · <span style="color:var(--red)">sót cũ ${nSotOld}</span>`:''} · đang chọn <b id="bgSelN">${nSel}</b></b>
     <div class="sp"></div>
