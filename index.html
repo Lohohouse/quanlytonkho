@@ -7546,7 +7546,7 @@ function tmKyWindow(mon){ var m=mon||tonMonth,y=2026,sm=m-1,sy=y; if(sm<1){sm=12
 function tmSums(code){ var w=tmKyWindow(tonMonth); var start=w[0],end=w[1]; var ct=(DATA.tmChotTs&&DATA.tmChotTs[code]); if(ct){ var cd=new Date(ct).toISOString().slice(0,10); if(cd>start)start=cd; } var nhap=0,dung=0; (DATA.nx||[]).forEach(function(r){ if(r.code!==code)return; var d=(r.ngay||'').slice(0,10); if(d<start||d>end)return; if(r.loai==='xuat')dung+=(+r.sl||0); else if(r.loai==='nhap')nhap+=(+r.sl||0); }); return {nhap:nhap,dung:dung}; }
 /* Kiểm kho theo tên màu */
 function tmKKSet(code,val){ if(!DATA.tmKK)DATA.tmKK={}; if(val===''||val==null)delete DATA.tmKK[code]; else DATA.tmKK[code]=Number(val); save(); rKiemkho(); }
-function tmKKChot(){ if(!DATA.tmKK||!Object.keys(DATA.tmKK).length){alert('Chưa nhập số đếm màu nào.');return;} if(!confirm('CHỐT TỒN TINH MÀU: đặt Tồn = số đếm cho các màu vừa nhập?\n• Tồn hiện tại của màu đó = số đếm.\n• Sử dụng/Nhập mới tính lại kể từ bây giờ.'))return; if(!DATA.tmChotTs)DATA.tmChotTs={}; var now=Date.now(),n=0; Object.keys(DATA.tmKK).forEach(function(c){ var v=Number(DATA.tmKK[c])||0; var r=DATA.ton.find(function(x){return x.code===c;}); if(r){r.dk=v;r._ts=now;} else DATA.ton.push({code:c,dk:v,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0,_ts:now}); DATA.tmChotTs[c]=now; n++; }); DATA.tmKK={}; save(); rKiemkho(); alert('✓ Đã chốt tồn '+n+' màu. Xem ở Theo dõi tồn → Tinh màu.'); }
+function tmKKChot(){ if(!DATA.tmKK||!Object.keys(DATA.tmKK).length){alert('Chưa nhập số đếm màu nào.');return;} if(!confirm('CHỐT TỒN TINH MÀU: đặt Tồn = số đếm cho các màu vừa nhập?\n• Tồn hiện tại của màu đó = số đếm.\n• Sử dụng/Nhập mới tính lại kể từ bây giờ.'))return; if(!DATA.tmChotTs)DATA.tmChotTs={}; DATA.tmHistory=DATA.tmHistory||{}; var today=new Date().toISOString().slice(0,10); var ym=_ymOfDate(today); if(!DATA.tmHistory[ym])DATA.tmHistory[ym]={ngay:today,items:[]}; var now=Date.now(),n=0; Object.keys(DATA.tmKK).forEach(function(c){ var v=Number(DATA.tmKK[c])||0; var s=tmSums(c); var sys=tmDau(c)+s.nhap-s.dung; var diff=v-sys; var r=DATA.ton.find(function(x){return x.code===c;}); if(r){r.dk=v;r._ts=now;} else DATA.ton.push({code:c,dk:v,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0,_ts:now}); DATA.tmChotTs[c]=now; var arr=DATA.tmHistory[ym].items; var ex=null; for(var i=0;i<arr.length;i++){if(arr[i].code===c){ex=arr[i];break;}} var rec={code:c,ten:(nm(c)||''),sys:sys,thuc:v,diff:diff}; if(ex){for(var k in rec)ex[k]=rec[k];}else arr.push(rec); DATA.tmHistory[ym].ngay=today; n++; }); DATA.tmKK={}; save(); rKiemkho(); alert('✓ Đã chốt tồn '+n+' màu. Lịch sử ở Kiểm kho → 📚 Lịch sử → Tinh màu.'); }
 function rKKTinhMau(){ var prods=tmProds().sort(function(a,b){return a.code.localeCompare(b.code);});
   var tabs=`<div class="tabs2"><button class="on" onclick="kkSub2='tm';rKiemkho()">🎨 Tinh màu</button><button onclick="kkSub2='nvl';kkF.cat='';kkF.nguoi='';rKiemkho()">Nguyên liệu</button><button onclick="kkSub2='tp';kkF.cat='';kkF.nguoi='';rKiemkho()">Thành phẩm</button></div>`;
   var rows=prods.map(function(p){ var c=p.code; var s=tmSums(c); var sysTon=tmDau(c)+s.nhap-s.dung; var cnt=(DATA.tmKK&&DATA.tmKK[c]!=null)?DATA.tmKK[c]:''; var lech=(cnt!==''&&cnt!=null)?(Number(cnt)-sysTon):'';
@@ -8852,6 +8852,53 @@ function wkConfirmAll(){ ensureWeek(); var M=computeTon(); var codes=Object.keys
   codes.forEach(function(c){ if(wkOne(c,wkTon(M,c)))n++; });
   if(!n){alert('Chưa nhập số đếm nào.');return;} save(); alert('Đã ghi nhận '+n+' mã. Tồn đã được điều chỉnh.'); rKKTuan();
 }
+var kkSuView='', kkSuCat='nvl', kkSuMode='list', kkSuFCat='', kkSuFNguoi='', kkSuFLech=false;
+var KKSU_LBL={nvl:'nguyên liệu',tp:'thành phẩm',tm:'tinh màu'};
+function kkSuCatOf(code){ var t=P(code)&&P(code).type; return t==='NVL'?'nvl':(t==='TM'?'tm':'tp'); }
+function kkSuItems(cat,ym){
+  if(cat==='tm'){ var th=DATA.tmHistory&&DATA.tmHistory[ym]; return th?(th.items||[]).map(function(it){return {code:it.code,ten:it.ten||nm(it.code)||'',lt:it.sys,thuc:it.thuc,diff:it.diff};}):[]; }
+  var h=DATA.kkHistory&&DATA.kkHistory[ym]; if(!h)return [];
+  return (h.items||[]).filter(function(it){return kkSuCatOf(it.code)===cat;}).map(function(it){return {code:it.code,ten:nm(it.code)||'',lt:it.lt,thuc:it.thuc,diff:it.diff,ppl:it.ppl};});
+}
+function kkSuMonths(cat){ var set={};
+  if(cat==='tm'){ Object.keys(DATA.tmHistory||{}).forEach(function(m){ if((DATA.tmHistory[m].items||[]).length)set[m]=1; }); }
+  else { Object.keys(DATA.kkHistory||{}).forEach(function(m){ if(kkSuItems(cat,m).length)set[m]=1; }); }
+  return Object.keys(set).sort().reverse();
+}
+function kkSuStat(items){ var n=items.length,nL=0,thua=0,thieu=0; items.forEach(function(it){var d=+it.diff||0; if(d!==0)nL++; if(d>0)thua+=d; if(d<0)thieu+=(-d);}); return {n:n,nL:nL,thua:thua,thieu:thieu}; }
+function kkSuSetCat(c){ kkSuCat=c; kkSuView=''; rKiemkho(); }
+function rKKSu(){ ensureKK();
+  var catBtns=[['nvl','Nguyên liệu'],['tp','Thành phẩm'],['tm','Tinh màu']].map(function(x){return '<button class="btn'+(kkSuCat===x[0]?' pri':'')+'" onclick="kkSuSetCat(\''+x[0]+'\')">'+x[1]+'</button>';}).join('');
+  var modeBtns='<button class="btn'+(kkSuMode==='list'?' pri':'')+'" onclick="kkSuMode=\'list\';kkSuView=\'\';rKiemkho()">📋 Danh sách kỳ</button><button class="btn'+(kkSuMode==='ss'?' pri':'')+'" onclick="kkSuMode=\'ss\';kkSuView=\'\';rKiemkho()">📊 So sánh tháng</button>';
+  var head='<div class="bar" style="margin-top:10px;gap:6px;flex-wrap:wrap">'+catBtns+'<span style="width:14px"></span>'+modeBtns+'</div>';
+  var lbl=KKSU_LBL[kkSuCat];
+  if(kkSuView){
+    var itsAll=kkSuItems(kkSuCat,kkSuView); var isTm=(kkSuCat==='tm');
+    var cats=uniq(itsAll.map(function(it){return P(it.code)&&P(it.code).ck;}).filter(Boolean));
+    var ppls=[]; if(!isTm){ var seenP={}; itsAll.forEach(function(it){ (it.ppl||'').split(',').forEach(function(x){x=x.trim(); if(x&&!seenP[x]){seenP[x]=1;ppls.push(x);}}); }); }
+    if(kkSuFCat && cats.indexOf(kkSuFCat)<0)kkSuFCat='';
+    if(kkSuFNguoi && ppls.indexOf(kkSuFNguoi)<0)kkSuFNguoi='';
+    var its=itsAll.filter(function(it){ var d=+it.diff||0; if(kkSuFLech && d===0)return false; if(kkSuFCat){var p=P(it.code); if(!p||p.ck!==kkSuFCat)return false;} if(kkSuFNguoi && !isTm){ if((it.ppl||'').split(',').map(function(x){return x.trim();}).indexOf(kkSuFNguoi)<0)return false; } return true; });
+    var st=kkSuStat(its);
+    var catOpt='<option value="">Danh mục: tất cả</option>'+cats.map(function(ck){return '<option value="'+ck+'"'+(kkSuFCat===ck?' selected':'')+'>'+((DATA.cats&&DATA.cats[ck])||ck)+'</option>';}).join('');
+    var ngOpt='<option value="">Người kiểm: tất cả</option>'+ppls.map(function(p){return '<option value="'+p.replace(/"/g,'&quot;')+'"'+(kkSuFNguoi===p?' selected':'')+'>'+p+'</option>';}).join('');
+    var fbar='<div class="bar" style="margin-top:6px;gap:8px;flex-wrap:wrap"><select onchange="kkSuFCat=this.value;rKiemkho()" style="font-weight:600">'+catOpt+'</select>'+(isTm?'':'<select onchange="kkSuFNguoi=this.value;rKiemkho()" style="font-weight:600">'+ngOpt+'</select>')+'<label class="sub" style="display:inline-flex;align-items:center;gap:5px"><input type="checkbox" '+(kkSuFLech?'checked':'')+' onchange="kkSuFLech=this.checked;rKiemkho()"> Chỉ hiện mã lệch</label><button class="btn" onclick="kkSuFCat=\'\';kkSuFNguoi=\'\';kkSuFLech=false;rKiemkho()">✗ Xóa lọc</button></div>';
+    var rows=its.map(function(it){var d=+it.diff||0;return '<tr><td class="mono">'+it.code+'</td><td>'+(it.ten||'')+'</td>'+(isTm?'':'<td class="sub" style="font-size:10.5px">'+(it.ppl||'—')+'</td>')+'<td class="r">'+num(it.lt)+'</td><td class="r"><b>'+num(it.thuc)+'</b></td><td class="r"><b style="color:'+(d<0?'var(--red)':(d>0?'var(--green)':'var(--muted)'))+'">'+(d>0?'+':'')+num(d)+'</b></td></tr>';}).join('')||'<tr><td colspan="'+(isTm?5:6)+'" class="sub" style="text-align:center;padding:10px">Không có mã khớp bộ lọc.</td></tr>';
+    el('kkBody').innerHTML=head+'<div class="bar" style="margin-top:8px"><button class="btn" onclick="kkSuView=\'\';rKiemkho()">← Quay lại danh sách</button><span class="sub">Kỳ <b>'+kkSuView+'</b> · đang xem '+st.n+' mã · lệch '+st.nL+' · thừa +'+num(st.thua)+' · thiếu -'+num(st.thieu)+'</span><div class="sp"></div><button class="btn gr" onclick="exportXLSX(\'tblKKsuD\',\'Kiem kho '+kkSuCat+' '+kkSuView+'\')">⬇ Excel</button></div>'+fbar+'<div class="card scroll"><table id="tblKKsuD"><tr><th>SKU</th><th>Tên</th>'+(isTm?'':'<th>Người kiểm</th>')+'<th class="r">'+(isTm?'Tồn hệ thống':'Tồn lý thuyết')+'</th><th class="r">Tồn thực tế</th><th class="r">Lệch</th></tr>'+rows+'</table></div>';
+    return;
+  }
+  var months=kkSuMonths(kkSuCat);
+  if(!months.length){ el('kkBody').innerHTML=head+'<div class="note" style="margin-top:10px">Chưa có kỳ '+lbl+' nào được chốt. '+(kkSuCat==='tm'?'Tinh màu: sau khi bấm "Chốt tồn tinh màu" ở tab ② (mục Tinh màu), kỳ sẽ hiện ở đây (từ nay trở đi).':'Sau khi Đóng kỳ ở tab ③, kỳ sẽ hiện ở đây.')+'</div>'; return; }
+  if(kkSuMode==='ss'){
+    var rows=months.map(function(m){ var st=kkSuStat(kkSuItems(kkSuCat,m)); return '<tr style="cursor:pointer" onclick="kkSuView=\''+m+'\';rKiemkho()"><td class="mono"><b>'+m+'</b></td><td class="r">'+num(st.n)+'</td><td class="r"><b style="color:'+(st.nL?'#b9770e':'#1e8e4e')+'">'+num(st.nL)+'</b></td><td class="r" style="color:#1e8e4e">'+(st.thua?('+'+num(st.thua)):'—')+'</td><td class="r" style="color:#c0392b">'+(st.thieu?('-'+num(st.thieu)):'—')+'</td><td class="r"><b>'+((st.thua-st.thieu)>0?'+':'')+num(st.thua-st.thieu)+'</b></td></tr>';}).join('');
+    el('kkBody').innerHTML=head+'<div class="note" style="margin-top:10px">So sánh các kỳ '+lbl+' — bấm 1 dòng để xem chi tiết.</div><div class="card scroll" style="margin-top:8px"><table id="tblKKss"><tr><th>Kỳ</th><th class="r">Số mã</th><th class="r">Số mã lệch</th><th class="r">Tổng thừa</th><th class="r">Tổng thiếu</th><th class="r">Lệch ròng</th></tr>'+rows+'</table></div>';
+    return;
+  }
+  var rows=months.map(function(m){ var h=(kkSuCat==='tm')?(DATA.tmHistory[m]||{}):(DATA.kkHistory[m]||{}); var st=kkSuStat(kkSuItems(kkSuCat,m)); var ng=h.ngayChot||h.ngay||'—'; var lenh=h.lenh||'—';
+    return '<tr style="cursor:pointer" onclick="kkSuView=\''+m+'\';rKiemkho()"><td class="mono"><b>'+m+'</b></td><td>'+ng+'</td>'+(kkSuCat==='tm'?'':'<td class="mono">'+lenh+'</td>')+'<td class="r">'+num(st.n)+'</td><td class="r"><b style="color:'+(st.nL?'#b9770e':'#1e8e4e')+'">'+num(st.nL)+'</b></td><td class="r" style="color:#1e8e4e">'+(st.thua?('+'+num(st.thua)):'—')+'</td><td class="r" style="color:#c0392b">'+(st.thieu?('-'+num(st.thieu)):'—')+'</td><td><button class="btn" style="padding:2px 10px" onclick="event.stopPropagation();kkSuView=\''+m+'\';rKiemkho()">Xem</button></td></tr>';}).join('');
+  var colHead='<th>Kỳ</th><th>Ngày chốt</th>'+(kkSuCat==='tm'?'':'<th>Lệnh</th>')+'<th class="r">Số mã</th><th class="r">Số mã lệch</th><th class="r">Tổng thừa</th><th class="r">Tổng thiếu</th><th></th>';
+  el('kkBody').innerHTML=head+'<div class="note" style="margin-top:10px">Các kỳ '+lbl+' <b>đã chốt</b>. Bấm 1 dòng (hoặc <b>Xem</b>) để xem chi tiết từng mã.</div><div class="card scroll" style="margin-top:8px"><table id="tblKKsu"><tr>'+colHead+'</tr>'+rows+'</table></div>';
+}
 function rKiemkho(){ ensureKK();
   ensureWeek();
   var _fri=(new Date().getDay()===5);
@@ -8862,8 +8909,9 @@ function rKiemkho(){ ensureKK();
      <button class="${kkSub==='ban'?'on':''}" onclick="kkSub='ban';rKiemkho()">② Tạo bản kiểm kho 盤點表</button>
      <button class="${kkSub==='dong'?'on':''}" onclick="kkSub='dong';rKiemkho()">③ Đóng kỳ & chuyển kỳ 結轉</button>
      <button class="${kkSub==='tuan'?'on':''}" onclick="kkSub='tuan';rKiemkho()">⚡ Kiểm nhanh tuần 週盤點 (NVL)</button>
+     <button class="${kkSub==='su'?'on':''}" onclick="kkSub='su';rKiemkho()">📚 Lịch sử 歷史</button>
    </div><div id="kkBody"></div>`;
-  if(kkSub==='chot')rKKChot();else if(kkSub==='ban')rKKBan();else if(kkSub==='dong')rKKDong();else rKKTuan();
+  if(kkSub==='chot')rKKChot();else if(kkSub==='ban')rKKBan();else if(kkSub==='dong')rKKDong();else if(kkSub==='su')rKKSu();else rKKTuan();
 }
 function rKKChot(){ ensureKK();var snapped=Object.keys(DATA.kk.snap).length>0;
   var body=`<div class="bar"><label class="sub">Ngày chốt kho:</label><input type="date" id="kkDate" value="${DATA.kk.ngayChot||'2026-06-25'}"><button class="btn pri" onclick="kkChot()">📷 Chốt kiểm kho (snapshot tồn lý thuyết)</button>${snapped?'<span class="tag t-ok">Đã chốt: '+DATA.kk.ngayChot+'</span>':''}<button class="btn" style="color:var(--red)" onclick="kkResetKy()">🗑 Làm mới kỳ (xóa kỳ test)</button><div class="sp"></div>${snapped?`<button class="btn gr" onclick="exportXLSX('tblKKsnap','Chot kiem kho')">⬇ Excel 匯出</button>`:''}</div>`;
