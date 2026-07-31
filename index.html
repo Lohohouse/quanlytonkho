@@ -9067,28 +9067,35 @@ function rKKDong(){ ensureKK();var am=amKK();
    <div class="bar"><div class="sp"></div><button class="btn pri" style="background:var(--green);border-color:var(--green)" ${done.length?'':'disabled'} onclick="kkDong()">🔒 Chốt kỳ & chuyển ${done.length} mã sang đầu kỳ</button></div>`;
 }
 function dongKyNhanh(){ ensureKK();
-  var ng=DATA.kk.ngayChot||'2026-07-25'; var correctTs=Date.now();   // FIX: mốc cắt = thời điểm đóng THẬT (bây giờ), không cắt cứng 25/07 vì đơn thường xuất trễ sau ngày ranh kỳ
-  var ymClose=_ymOfDate(ng); var ymNext=_nextYm(ymClose);
-  if(!confirm('ĐÓNG KỲ KHẨN CẤP: '+ymClose+' → '+ymNext+' (mốc '+ng+' 23:59).\n\n• Đầu kỳ mới = TỒN HỆ THỐNG tại '+ng+' (tính từ đơn hàng — KHÔNG dùng số đếm tay vì đã mất do đồng bộ).\n• Xuất kho từ 26 trở đi sẽ vào kỳ '+ymNext+'.\n\nNÊN bấm ☁ Sao lưu ngay TRƯỚC. Tiếp tục?'))return;
+  var ymClose='2026-07', ymNext='2026-08';
   DATA.tonPts=DATA.tonPts||{};DATA.tonKy=DATA.tonKy||{};DATA.kyArchive=DATA.kyArchive||{};
-  var gStart0=DATA.periodStartTs||(DATA.periodStart?Date.parse(DATA.periodStart+'T00:00:00'):0);
-  if(!DATA.kyArchive[ymClose])DATA.kyArchive[ymClose]={ngayChot:ng,lenh:DATA.kk.lenh||'',chotTs:correctTs,dongTs:Date.now(),rows:{}};
-  else DATA.kyArchive[ymClose].chotTs=correctTs;
+  var _n=new Date(),pad=function(x){return('0'+x).slice(-2);};
+  var defT=(DATA.kk&&DATA.kk.chotMoment)?DATA.kk.chotMoment:(_n.getFullYear()+'-'+pad(_n.getMonth()+1)+'-'+pad(_n.getDate())+' '+pad(_n.getHours())+':'+pad(_n.getMinutes()));
+  var inp=prompt('Nhập ĐÚNG ngày giờ BẠN BẤM KIỂM KHO chốt kỳ 7 (định dạng: YYYY-MM-DD HH:MM).\n\n• Mọi xuất/nhập TRƯỚC mốc này -> THÁNG 7.\n• Sau mốc này -> THÁNG 8.\n• Đây là mốc CỐ ĐỊNH: bấm lại với cùng mốc luôn ra cùng số, không lệch thêm.',defT);
+  if(inp===null)return; inp=(''+inp).trim();
+  var T=Date.parse(inp.replace(' ','T')); if(isNaN(T)){alert('Sai định dạng. Ví dụ đúng: 2026-07-31 15:00');return;}
+  if(!confirm('CHỐT KỲ 7 tại mốc CỐ ĐỊNH: '+new Date(T).toLocaleString()+'\n\n• Tháng 7 = hoạt động tới mốc này.\n• Tháng 8 = từ mốc này về sau; đầu kỳ 8 = tồn cuối tháng 7.\n\nNÊN bấm ☁ Sao lưu ngay TRƯỚC. Tiếp tục?'))return;
+  DATA.kk.chotMoment=inp;
+  var ky7Start=(DATA.kyArchive['2026-06']&&DATA.kyArchive['2026-06'].chotTs)||DATA.periodStartTs||Date.parse('2026-06-26T00:00:00+07:00');
+  if(!DATA.kyArchive[ymClose])DATA.kyArchive[ymClose]={ngayChot:'2026-07-25',lenh:DATA.kk.lenh||'',chotTs:T,dongTs:Date.now(),rows:{}};
+  else DATA.kyArchive[ymClose].chotTs=T;
   var prods=DATA.products.filter(function(p){return !p.combo&&p.type!=='Combo'&&p.type!=='TM';});
-  var byStart={}; prods.forEach(function(p){var c=p.code; var st=(DATA.tonPts[c]!=null)?DATA.tonPts[c]:gStart0; (byStart[st]=byStart[st]||[]).push(c);});
+  var w=computeTonWindow(ky7Start, T, false, false);
   var now=Date.now(),n=0;
-  Object.keys(byStart).forEach(function(k){ var w=computeTonWindow(+k, correctTs, true, true);
-    byStart[k].forEach(function(c){ var r=w[c]||{dk:0,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0};
-      DATA.kyArchive[ymClose].rows[c]={dk:+r.dk||0,moi:+r.moi||0,nb:+r.nb||0,hd:+r.hd||0,bh:+r.bh||0,qt:+r.qt||0,sx:+r.sx||0};
-      var ton=(+r.dk||0)+(+r.moi||0)-((+r.nb||0)+(+r.hd||0)+(+r.bh||0)+(+r.qt||0)+(+r.sx||0));
-      var tr=DATA.ton.find(function(x){return x.code===c;}); if(tr){tr.dk=ton;tr.moi=0;tr.nb=0;tr.hd=0;tr.bh=0;tr.qt=0;tr.sx=0;tr._ts=now;} else DATA.ton.push({code:c,dk:ton,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0,_ts:now});
-      DATA.tonPts[c]=correctTs; DATA.tonKy[c]=ymNext; n++;
-    });
+  prods.forEach(function(p){ var c=p.code;
+    var ex=DATA.kyArchive[ymClose].rows[c];
+    var D7=(ex&&ex.dk!=null)?(+ex.dk||0):(function(){var r=DATA.ton.find(function(x){return x.code===c;});return r?(+r.dk||0):0;})();
+    var mv=w[c]||{dk:0,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0};
+    DATA.kyArchive[ymClose].rows[c]={dk:D7,moi:+mv.moi||0,nb:+mv.nb||0,hd:+mv.hd||0,bh:+mv.bh||0,qt:+mv.qt||0,sx:+mv.sx||0};
+    var out=(+mv.nb||0)+(+mv.hd||0)+(+mv.bh||0)+(+mv.qt||0)+(+mv.sx||0);
+    var end=D7+(+mv.moi||0)-out;
+    var tr=DATA.ton.find(function(x){return x.code===c;}); if(tr){tr.dk=end;tr.moi=0;tr.nb=0;tr.hd=0;tr.bh=0;tr.qt=0;tr.sx=0;tr._ts=now;} else DATA.ton.push({code:c,dk:end,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0,_ts:now});
+    DATA.tonPts[c]=T; DATA.tonKy[c]=ymNext; n++;
   });
-  DATA.kk.chotTs=correctTs; DATA.kk.snap={}; DATA.kk.thuc={}; DATA.kk.done={}; DATA.kk.ngayChot=''; DATA.kk.lenh=''; DATA.kk.confirmed=false; DATA.kk._tsHead=now;
+  DATA.kk.chotTs=T; DATA.kk.snap={}; DATA.kk.thuc={}; DATA.kk.done={}; DATA.kk._tsHead=now;
   DATA.curKyYm=ymNext;
   save(); if(typeof rTonkho==='function')rTonkho();
-  alert('✓ Đã đóng kỳ '+ymClose+' → '+ymNext+' cho '+n+' mã.\n• Tháng '+ymClose+' đã chốt (xem 📚 Lịch sử / Theo dõi tồn).\n• Xuất kho hiện tại vào đúng kỳ '+ymNext+'.\n\n⚠ ĐA MÁY: các máy KHÁC phải bấm "☁ Tải lại từ Sheets" ngay, TUYỆT ĐỐI không để máy cũ đẩy đè.');
+  alert('✓ Đã chốt kỳ 7 tại mốc CỐ ĐỊNH '+new Date(T).toLocaleString()+' ('+n+' mã).\n• Tháng 7 = hoạt động tới mốc này.\n• Tháng 8 đầu kỳ = tồn cuối tháng 7.\n\nBấm lại với CÙNG mốc luôn ra cùng số — không còn lệch thêm.');
 }
 function fixKyDongLech(){ if(!DATA.kyArchive){alert('Chưa có kỳ nào đã đóng.');return;}
   if(!confirm('SỬA các kỳ đã đóng bị lệch mốc thời gian?\n• Tính lại số bán/nhập của tháng đã đóng cho đúng.\n• Sửa mốc kỳ mới để tháng mới không lẫn số tháng trước.\nNên bấm ☁ Sao lưu ngay trước. Tiếp tục?'))return;
