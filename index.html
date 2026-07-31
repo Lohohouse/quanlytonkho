@@ -9067,7 +9067,7 @@ function rKKDong(){ ensureKK();var am=amKK();
    <div class="bar"><div class="sp"></div><button class="btn pri" style="background:var(--green);border-color:var(--green)" ${done.length?'':'disabled'} onclick="kkDong()">🔒 Chốt kỳ & chuyển ${done.length} mã sang đầu kỳ</button></div>`;
 }
 function dongKyNhanh(){ ensureKK();
-  var ng=DATA.kk.ngayChot||'2026-07-25'; var correctTs=Date.parse(ng+'T23:59:59');
+  var ng=DATA.kk.ngayChot||'2026-07-25'; var correctTs=Date.now();   // FIX: mốc cắt = thời điểm đóng THẬT (bây giờ), không cắt cứng 25/07 vì đơn thường xuất trễ sau ngày ranh kỳ
   var ymClose=_ymOfDate(ng); var ymNext=_nextYm(ymClose);
   if(!confirm('ĐÓNG KỲ KHẨN CẤP: '+ymClose+' → '+ymNext+' (mốc '+ng+' 23:59).\n\n• Đầu kỳ mới = TỒN HỆ THỐNG tại '+ng+' (tính từ đơn hàng — KHÔNG dùng số đếm tay vì đã mất do đồng bộ).\n• Xuất kho từ 26 trở đi sẽ vào kỳ '+ymNext+'.\n\nNÊN bấm ☁ Sao lưu ngay TRƯỚC. Tiếp tục?'))return;
   DATA.tonPts=DATA.tonPts||{};DATA.tonKy=DATA.tonKy||{};DATA.kyArchive=DATA.kyArchive||{};
