@@ -7631,7 +7631,7 @@ function rTonkho(){
     <select onchange="tonCat=this.value;rTonDraw()" style="font-weight:600">${catOpts}</select>
     <select onchange="tonWarn=this.value;rTonDraw()" style="font-weight:600">${warnOpts}</select>
     <input id="tonFind" placeholder="Tìm SKU / tên · 搜尋" value="${tonFind}" oninput="tonApply()" style="flex:1;min-width:150px">
-    <div class="sp"></div><button class="btn" onclick="tonGroupSelected()" title="Đưa các mã đã tick lại sát nhau">🔗 Gom mã đã chọn</button><button class="btn" onclick="tonResetOrder()" title="Về thứ tự mặc định">↺ Thứ tự gốc</button><button class="btn" onclick="fixKyDongLech()" title="Sửa kỳ đã đóng bị lệch mốc thời gian (tháng cũ trống / tháng mới lẫn số)" style="color:#b9770e">🩹 Sửa kỳ đóng lệch</button><button class="btn" onclick="tonHideSel(true)">🚫 Ẩn đã chọn</button><button class="btn" onclick="tonHideSel(false)">↩ Bỏ ẩn</button><label class="sub" style="display:inline-flex;align-items:center;gap:4px;margin:0 4px"><input type="checkbox" ${tonShowHidden?'checked':''} onchange="tonShowHidden=this.checked;rTonkho()"> Hiện mã đã ẩn</label><button class="btn" onclick="tonM2CatModal()" title="Cấu hình danh mục dùng quy đổi m²">⚙ Quy đổi m²</button><button class="btn gr" onclick="exportXLSX('tblTon','Theo doi ton')">⬇ Xuất Excel 匯出</button></div>
+    <div class="sp"></div><button class="btn" onclick="tonGroupSelected()" title="Đưa các mã đã tick lại sát nhau">🔗 Gom mã đã chọn</button><button class="btn" onclick="tonResetOrder()" title="Về thứ tự mặc định">↺ Thứ tự gốc</button><button class="btn" onclick="fixKyDongLech()" title="Sửa kỳ đã đóng bị lệch mốc thời gian (tháng cũ trống / tháng mới lẫn số)" style="color:#b9770e">🩹 Sửa kỳ đóng lệch</button><button class="btn" onclick="dongKyNhanh()" title="Đóng kỳ hiện tại sang kỳ mới bằng tồn hệ thống (khi số đếm bị mất/đồng bộ đè)" style="color:#c0392b">⚡ Đóng kỳ 7→8 khẩn cấp</button><button class="btn" onclick="tonHideSel(true)">🚫 Ẩn đã chọn</button><button class="btn" onclick="tonHideSel(false)">↩ Bỏ ẩn</button><label class="sub" style="display:inline-flex;align-items:center;gap:4px;margin:0 4px"><input type="checkbox" ${tonShowHidden?'checked':''} onchange="tonShowHidden=this.checked;rTonkho()"> Hiện mã đã ẩn</label><button class="btn" onclick="tonM2CatModal()" title="Cấu hình danh mục dùng quy đổi m²">⚙ Quy đổi m²</button><button class="btn gr" onclick="exportXLSX('tblTon','Theo doi ton')">⬇ Xuất Excel 匯出</button></div>
   <div id="tonCount" class="sub" style="margin:0 0 8px;font-weight:500"></div>
   <div class="card scroll"><table id="tblTon"></table></div>
   <div class="note">Áp tất cả mã SP. <b>Số tồn</b> = Tồn đầu + Tồn mới − Tổng xuất. <b>TB/ngày</b> chia theo số ngày <b>đã chạy</b> trong kỳ (26 → hôm nay). <b>Cảnh báo</b>: dưới ngưỡng (sửa từng mã) → cần đặt thêm; trên 2 tháng → tồn lâu.<br><b>Dời vị trí:</b> kéo biểu tượng <b>⣿</b> ở đầu mỗi dòng thả vào chỗ muốn đặt; hoặc tick nhiều mã rồi bấm <b>🔗 Gom mã đã chọn</b> để đưa chúng sát nhau. Bấm <b>↺ Thứ tự gốc</b> để hoàn tác.</div>`;
@@ -9065,6 +9065,30 @@ function rKKDong(){ ensureKK();var am=amKK();
    <div class="card scroll"><table id="tblDong"><tr><th>SKU</th><th>Tên SP</th><th>Danh mục</th><th>Người phụ trách</th><th class="r">Tồn lý thuyết</th><th class="r">Tồn thực tế</th><th class="r">Lệch</th></tr>${rows}</table></div>
    <div class="note">Chỉ những mã <b>đã xác nhận ✓</b> ở tab ② mới chuyển kỳ: <b>Tồn thực tế</b> → <b>Tồn đầu kỳ</b> kỳ sau; xuất/nhập trước ngày chốt thuộc kỳ cũ (khoá). Cũng là số đầu kỳ cho hệ thống tính giá.</div>
    <div class="bar"><div class="sp"></div><button class="btn pri" style="background:var(--green);border-color:var(--green)" ${done.length?'':'disabled'} onclick="kkDong()">🔒 Chốt kỳ & chuyển ${done.length} mã sang đầu kỳ</button></div>`;
+}
+function dongKyNhanh(){ ensureKK();
+  var ng=DATA.kk.ngayChot||'2026-07-25'; var correctTs=Date.parse(ng+'T23:59:59');
+  var ymClose=_ymOfDate(ng); var ymNext=_nextYm(ymClose);
+  if(!confirm('ĐÓNG KỲ KHẨN CẤP: '+ymClose+' → '+ymNext+' (mốc '+ng+' 23:59).\n\n• Đầu kỳ mới = TỒN HỆ THỐNG tại '+ng+' (tính từ đơn hàng — KHÔNG dùng số đếm tay vì đã mất do đồng bộ).\n• Xuất kho từ 26 trở đi sẽ vào kỳ '+ymNext+'.\n\nNÊN bấm ☁ Sao lưu ngay TRƯỚC. Tiếp tục?'))return;
+  DATA.tonPts=DATA.tonPts||{};DATA.tonKy=DATA.tonKy||{};DATA.kyArchive=DATA.kyArchive||{};
+  var gStart0=DATA.periodStartTs||(DATA.periodStart?Date.parse(DATA.periodStart+'T00:00:00'):0);
+  if(!DATA.kyArchive[ymClose])DATA.kyArchive[ymClose]={ngayChot:ng,lenh:DATA.kk.lenh||'',chotTs:correctTs,dongTs:Date.now(),rows:{}};
+  else DATA.kyArchive[ymClose].chotTs=correctTs;
+  var prods=DATA.products.filter(function(p){return !p.combo&&p.type!=='Combo'&&p.type!=='TM';});
+  var byStart={}; prods.forEach(function(p){var c=p.code; var st=(DATA.tonPts[c]!=null)?DATA.tonPts[c]:gStart0; (byStart[st]=byStart[st]||[]).push(c);});
+  var now=Date.now(),n=0;
+  Object.keys(byStart).forEach(function(k){ var w=computeTonWindow(+k, correctTs, true, true);
+    byStart[k].forEach(function(c){ var r=w[c]||{dk:0,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0};
+      DATA.kyArchive[ymClose].rows[c]={dk:+r.dk||0,moi:+r.moi||0,nb:+r.nb||0,hd:+r.hd||0,bh:+r.bh||0,qt:+r.qt||0,sx:+r.sx||0};
+      var ton=(+r.dk||0)+(+r.moi||0)-((+r.nb||0)+(+r.hd||0)+(+r.bh||0)+(+r.qt||0)+(+r.sx||0));
+      var tr=DATA.ton.find(function(x){return x.code===c;}); if(tr){tr.dk=ton;tr.moi=0;tr.nb=0;tr.hd=0;tr.bh=0;tr.qt=0;tr.sx=0;tr._ts=now;} else DATA.ton.push({code:c,dk:ton,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0,_ts:now});
+      DATA.tonPts[c]=correctTs; DATA.tonKy[c]=ymNext; n++;
+    });
+  });
+  DATA.kk.chotTs=correctTs; DATA.kk.snap={}; DATA.kk.thuc={}; DATA.kk.done={}; DATA.kk.ngayChot=''; DATA.kk.lenh=''; DATA.kk.confirmed=false; DATA.kk._tsHead=now;
+  DATA.curKyYm=ymNext;
+  save(); if(typeof rTonkho==='function')rTonkho();
+  alert('✓ Đã đóng kỳ '+ymClose+' → '+ymNext+' cho '+n+' mã.\n• Tháng '+ymClose+' đã chốt (xem 📚 Lịch sử / Theo dõi tồn).\n• Xuất kho hiện tại vào đúng kỳ '+ymNext+'.\n\n⚠ ĐA MÁY: các máy KHÁC phải bấm "☁ Tải lại từ Sheets" ngay, TUYỆT ĐỐI không để máy cũ đẩy đè.');
 }
 function fixKyDongLech(){ if(!DATA.kyArchive){alert('Chưa có kỳ nào đã đóng.');return;}
   if(!confirm('SỬA các kỳ đã đóng bị lệch mốc thời gian?\n• Tính lại số bán/nhập của tháng đã đóng cho đúng.\n• Sửa mốc kỳ mới để tháng mới không lẫn số tháng trước.\nNên bấm ☁ Sao lưu ngay trước. Tiếp tục?'))return;
