@@ -7391,8 +7391,10 @@ function computeTon(){
   function add(c,f,q){ if(!c)return; ini(c)[f]+=(+q||0); }
   var ps=DATA.periodStart||'';
   var gpts=DATA.periodStartTs||0;
-  function inKyC(rec,dateStr,dot,code){   // ranh giới kỳ theo TỪNG MÃ: mã đã đóng kỳ riêng dùng mốc riêng (DATA.tonPts[code]); chưa có dùng mốc chung/ngày
-    var pts=(DATA.tonPts&&DATA.tonPts[code]!=null)?DATA.tonPts[code]:gpts;
+  var _tmC={}; (DATA.ton||[]).forEach(function(r){_tmC[r.code]=r;});   // GIA CỐ: đọc kỳ từ dòng tồn (gộp an toàn theo _ts), fallback map cũ
+  function inKyC(rec,dateStr,dot,code){   // ranh giới kỳ theo TỪNG MÃ
+    var _r=_tmC[code];
+    var pts=(_r&&_r.tonPts!=null)?_r.tonPts:((DATA.tonPts&&DATA.tonPts[code]!=null)?DATA.tonPts[code]:gpts);
     if(pts){ var ct=(rec&&rec._ct!=null)?rec._ct:0;
       if(!ct){ if(dot){var td=Date.parse(dot);if(!isNaN(td))ct=td;} if(!ct&&dateStr){var dd=Date.parse(dateStr+'T00:00:00');if(!isNaN(dd))ct=dd;} }
       return ct>pts; }
@@ -7427,7 +7429,7 @@ function _nextYm(ym){ var a=(ym||'').split('-'); var mm=+a[1]+1,yy=+a[0]; if(mm>
 function curKyYm(){ if(DATA.curKyYm)return DATA.curKyYm; if(DATA.kk&&DATA.kk.ngayChot)return _ymOfDate(DATA.kk.ngayChot); var ps=DATA.periodStart||'2026-05-26'; var ym=_ymOfDate(ps); var day=new Date(ps+'T00:00:00').getDate(); if(day<26)ym=_nextYm(ym); return ym; }
 function _chotTs(){ if(DATA.kk&&DATA.kk.chotTs)return DATA.kk.chotTs; if(DATA.kk&&DATA.kk.ngayChot){var t=Date.parse(DATA.kk.ngayChot+'T23:59:59');if(!isNaN(t))return t;} return Date.now(); }
 function _dtLocalStr(ms){var d=new Date(ms);var p=function(n){return ('0'+n).slice(-2);};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes());}
-function kkSetChotTime(v){ ensureKK(); if(!v)return; var t=Date.parse(v); if(isNaN(t)){alert('Giờ không hợp lệ');return;} DATA.kk.chotTs=t; save(); rKiemkho(); }
+function kkSetChotTime(v){ ensureKK(); if(!v)return; var t=Date.parse(v); if(isNaN(t)){alert('Giờ không hợp lệ');return;} DATA.kk.chotTs=t; var _d=new Date(t); DATA.kk.ngayChot=_d.getFullYear()+'-'+('0'+(_d.getMonth()+1)).slice(-2)+'-'+('0'+_d.getDate()).slice(-2); save(); rKiemkho(); }
 function kkFixLateOld(){ ensureKK();
   var chot=DATA.kk.ngayChot; if(!chot){alert('Chưa có ngày chốt kiểm kho.');return;}
   var chotD=chot.slice(0,10); var cts=_chotTs();
@@ -7470,14 +7472,16 @@ function computeTonMonth(mon){
   var glob=curKyYm();
   var gStart=DATA.periodStartTs||(DATA.periodStart?Date.parse(DATA.periodStart+'T00:00:00'):0);
   var _nD=new Date(),_nM=_nD.getMonth()+1,_nY=_nD.getFullYear(); if(_nD.getDate()>=26){_nM++;if(_nM>12){_nM=1;_nY++;}} var nowKy=_nY+'-'+('0'+_nM).slice(-2);
-  var meta={};   // theo TỪNG MÃ: mã c xét theo kỳ hiện hành của riêng nó (DATA.tonKy/tonPts)
+  var _tmM={}; (DATA.ton||[]).forEach(function(r){_tmM[r.code]=r;});   // GIA CỐ: đọc kỳ từ dòng tồn (gộp an toàn theo _ts)
+  var meta={};   // theo TỪNG MÃ: kỳ hiện hành riêng của mã c
   DATA.products.forEach(function(p){ if(p.combo||p.type==='Combo')return; var c=p.code;
     if(arch[c])return;   // tháng này mã c đã đóng -> dùng số đã lưu (archive)
-    var _pin=(DATA.tonKy&&DATA.tonKy[c]);
-    var cpts=(DATA.tonPts&&DATA.tonPts[c]!=null)?DATA.tonPts[c]:gStart;
+    var _rc=_tmM[c];
+    var _pin=(_rc&&_rc.tonKy)?_rc.tonKy:(DATA.tonKy&&DATA.tonKy[c]);
+    var cpts=(_rc&&_rc.tonPts!=null)?_rc.tonPts:((DATA.tonPts&&DATA.tonPts[c]!=null)?DATA.tonPts[c]:gStart);
     var inChot=chotDone&&DATA.kk.snap[c]!=null;
     var _closing=inChot&&chotTs>cpts;   // FIX: chỉ coi là "đang đóng kỳ" khi mốc chốt NẰM SAU đầu kỳ; mốc chốt cũ/trùng đầu kỳ = xem như kỳ đang mở (không co khung về rỗng, không ẩn số bán)
-    var cm=_pin?DATA.tonKy[c]:((!_closing)?nowKy:glob);   // mã chưa gắn kỳ & chưa vào chốt thật -> thuộc kỳ hiện tại theo ngày
+    var cm=_pin?_pin:((!_closing)?nowKy:glob);   // mã chưa gắn kỳ & chưa vào chốt thật -> thuộc kỳ hiện tại theo ngày
     if(ym===cm){ meta[c]={st:cpts,en:(_closing?chotTs:Date.now()),seed:true,dauTrong:false,state:_closing?'closing':'open'}; }
     else if(_closing&&ym===_nextYm(cm)){ meta[c]={st:chotTs,en:Date.now(),seed:false,dauTrong:true,state:'pending'}; }
   });
@@ -7631,7 +7635,7 @@ function rTonkho(){
     <select onchange="tonCat=this.value;rTonDraw()" style="font-weight:600">${catOpts}</select>
     <select onchange="tonWarn=this.value;rTonDraw()" style="font-weight:600">${warnOpts}</select>
     <input id="tonFind" placeholder="Tìm SKU / tên · 搜尋" value="${tonFind}" oninput="tonApply()" style="flex:1;min-width:150px">
-    <div class="sp"></div><button class="btn" onclick="tonGroupSelected()" title="Đưa các mã đã tick lại sát nhau">🔗 Gom mã đã chọn</button><button class="btn" onclick="tonResetOrder()" title="Về thứ tự mặc định">↺ Thứ tự gốc</button><button class="btn" onclick="fixKyDongLech()" title="Sửa kỳ đã đóng bị lệch mốc thời gian (tháng cũ trống / tháng mới lẫn số)" style="color:#b9770e">🩹 Sửa kỳ đóng lệch</button><button class="btn" onclick="dongKyNhanh()" title="Đóng kỳ hiện tại sang kỳ mới bằng tồn hệ thống (khi số đếm bị mất/đồng bộ đè)" style="color:#c0392b">⚡ Đóng kỳ 7→8 khẩn cấp</button><button class="btn" onclick="tonHideSel(true)">🚫 Ẩn đã chọn</button><button class="btn" onclick="tonHideSel(false)">↩ Bỏ ẩn</button><label class="sub" style="display:inline-flex;align-items:center;gap:4px;margin:0 4px"><input type="checkbox" ${tonShowHidden?'checked':''} onchange="tonShowHidden=this.checked;rTonkho()"> Hiện mã đã ẩn</label><button class="btn" onclick="tonM2CatModal()" title="Cấu hình danh mục dùng quy đổi m²">⚙ Quy đổi m²</button><button class="btn gr" onclick="exportXLSX('tblTon','Theo doi ton')">⬇ Xuất Excel 匯出</button></div>
+    <div class="sp"></div><button class="btn" onclick="tonGroupSelected()" title="Đưa các mã đã tick lại sát nhau">🔗 Gom mã đã chọn</button><button class="btn" onclick="tonResetOrder()" title="Về thứ tự mặc định">↺ Thứ tự gốc</button><button class="btn" onclick="fixKyDongLech()" title="Sửa kỳ đã đóng bị lệch mốc thời gian (tháng cũ trống / tháng mới lẫn số)" style="color:#b9770e">🩹 Sửa kỳ đóng lệch</button><button class="btn" onclick="dongKyNhanh()" title="Đóng kỳ hiện tại sang kỳ mới bằng tồn hệ thống (khi số đếm bị mất/đồng bộ đè)" style="color:#c0392b">⚡ Đóng kỳ 7→8 khẩn cấp</button><button class="btn" onclick="napTKExcel()" title="Nạp tồn đầu kỳ từ file Excel kiểm kho tay — đặt đầu kỳ = số đã đếm" style="color:#1e8e4e">📥 Nạp tồn đầu (Excel KK)</button><input type="file" id="napTKFile" accept=".xlsx,.xls" style="display:none" onchange="napTKFileChosen(this)"><button class="btn" onclick="tonHideSel(true)">🚫 Ẩn đã chọn</button><button class="btn" onclick="tonHideSel(false)">↩ Bỏ ẩn</button><label class="sub" style="display:inline-flex;align-items:center;gap:4px;margin:0 4px"><input type="checkbox" ${tonShowHidden?'checked':''} onchange="tonShowHidden=this.checked;rTonkho()"> Hiện mã đã ẩn</label><button class="btn" onclick="tonM2CatModal()" title="Cấu hình danh mục dùng quy đổi m²">⚙ Quy đổi m²</button><button class="btn gr" onclick="exportXLSX('tblTon','Theo doi ton')">⬇ Xuất Excel 匯出</button></div>
   <div id="tonCount" class="sub" style="margin:0 0 8px;font-weight:500"></div>
   <div class="card scroll"><table id="tblTon"></table></div>
   <div class="note">Áp tất cả mã SP. <b>Số tồn</b> = Tồn đầu + Tồn mới − Tổng xuất. <b>TB/ngày</b> chia theo số ngày <b>đã chạy</b> trong kỳ (26 → hôm nay). <b>Cảnh báo</b>: dưới ngưỡng (sửa từng mã) → cần đặt thêm; trên 2 tháng → tồn lâu.<br><b>Dời vị trí:</b> kéo biểu tượng <b>⣿</b> ở đầu mỗi dòng thả vào chỗ muốn đặt; hoặc tick nhiều mã rồi bấm <b>🔗 Gom mã đã chọn</b> để đưa chúng sát nhau. Bấm <b>↺ Thứ tự gốc</b> để hoàn tác.</div>`;
@@ -8914,17 +8918,19 @@ function rKiemkho(){ ensureKK();
   if(kkSub==='chot')rKKChot();else if(kkSub==='ban')rKKBan();else if(kkSub==='dong')rKKDong();else if(kkSub==='su')rKKSu();else rKKTuan();
 }
 function rKKChot(){ ensureKK();var snapped=Object.keys(DATA.kk.snap).length>0;
-  var body=`<div class="bar"><label class="sub">Ngày chốt kho:</label><input type="date" id="kkDate" value="${DATA.kk.ngayChot||'2026-06-25'}"><button class="btn pri" onclick="kkChot()">📷 Chốt kiểm kho (snapshot tồn lý thuyết)</button>${snapped?'<span class="tag t-ok">Đã chốt: '+DATA.kk.ngayChot+'</span>':''}<button class="btn" style="color:var(--red)" onclick="kkResetKy()">🗑 Làm mới kỳ (xóa kỳ test)</button><div class="sp"></div>${snapped?`<button class="btn gr" onclick="exportXLSX('tblKKsnap','Chot kiem kho')">⬇ Excel 匯出</button>`:''}</div>`;
+  var body=`<div class="bar"><button class="btn pri" onclick="kkChot()">📷 Chốt kiểm kho NGAY (ghi đúng giờ bấm)</button><span class="sub">Mốc chốt = đúng thời điểm bấm nút → chia kỳ theo giờ này.</span>${snapped?'<span class="tag t-ok">Đã chốt: '+(DATA.kk.chotTs?new Date(DATA.kk.chotTs).toLocaleString():DATA.kk.ngayChot)+'</span>':''}<button class="btn" style="color:var(--red)" onclick="kkResetKy()">🗑 Làm mới kỳ (xóa kỳ test)</button><div class="sp"></div>${snapped?`<button class="btn gr" onclick="exportXLSX('tblKKsnap','Chot kiem kho')">⬇ Excel 匯出</button>`:''}</div>`;
   if(!snapped)body+=`<div class="note">Chọn <b>ngày chốt</b> rồi bấm <b>Chốt kiểm kho</b>: hệ thống chụp số tồn hiện tại làm <b>Tồn lý thuyết</b> cho bản kiểm kho. Bước này KHÔNG hiện tồn thực tế / chênh lệch (xử lý ở tab ②).</div>`;
   else{var rows=Object.keys(DATA.kk.snap).map(c=>`<tr><td class="mono">${c}</td><td>${nm(c)}</td><td>${(P(c)&&P(c).type==='NVL')?'Nguyên liệu':'Thành phẩm'}</td><td class="r">${num(DATA.kk.snap[c])}</td></tr>`).join('');
     body+=`<div class="card scroll"><table id="tblKKsnap"><tr><th>SKU</th><th>Tên SP</th><th>Phân loại</th><th class="r">Tồn lý thuyết</th></tr>${rows}</table></div><div class="note">Đã chốt tồn lý thuyết ngày <b>${DATA.kk.ngayChot}</b> (${Object.keys(DATA.kk.snap).length} mã). Sang tab ② để nhân viên kiểm kê.</div>`;}
   el('kkBody').innerHTML=body;
 }
-function kkChot(){ ensureKK();var d=el('kkDate').value;if(!d){alert('Chọn ngày chốt');return;}if(Object.keys(DATA.kk.snap).length&&!confirm('Đã có bản chốt — chốt lại sẽ ghi đè tồn lý thuyết?'))return;
-  DATA.kk.ngayChot=d;DATA.kk.chotTs=Date.now();var T=computeTon();DATA.kk.snap={};
+function kkChot(){ ensureKK();if(Object.keys(DATA.kk.snap).length&&!confirm('Đã có bản chốt — chốt lại sẽ ghi đè tồn lý thuyết?'))return;
+  var _now=Date.now();var _nd=new Date(_now);var _p2=function(x){return ('0'+x).slice(-2);};var d=_nd.getFullYear()+'-'+_p2(_nd.getMonth()+1)+'-'+_p2(_nd.getDate());
+  DATA.kk.ngayChot=d;DATA.kk.chotTs=_now;var T=computeTon();DATA.kk.snap={};
   DATA.products.forEach(p=>{if(p.combo||p.type==='TM')return;var r=T[p.code];DATA.kk.snap[p.code]=r?(r.dk+r.moi-(r.nb+r.hd+r.bh+r.qt+r.sx)):0;});
   DATA.kk.ep=DATA.kk.chotTs;DATA.kk._tsHead=DATA.kk.chotTs;DATA.kk._tsC={};Object.keys(DATA.kk.snap).forEach(function(c){DATA.kk._tsC[c]=DATA.kk.chotTs;});
   save();rKiemkho();
+  alert('\u2713 Đã chốt kiểm kho lúc '+new Date(DATA.kk.chotTs).toLocaleString()+'.\nMốc này = ĐÚNG giờ bấm — chia kỳ: đơn xuất TRƯỚC giờ này thuộc kỳ đang chốt, SAU sang kỳ mới.\nCần sửa giờ thì dùng ô "Thời điểm bấm chốt".');
 }
 function kkResetKy(){ ensureKK();
   var cur=DATA.kk.ngayChot||'(chưa chốt)';
@@ -9066,6 +9072,30 @@ function rKKDong(){ ensureKK();var am=amKK();
    <div class="note">Chỉ những mã <b>đã xác nhận ✓</b> ở tab ② mới chuyển kỳ: <b>Tồn thực tế</b> → <b>Tồn đầu kỳ</b> kỳ sau; xuất/nhập trước ngày chốt thuộc kỳ cũ (khoá). Cũng là số đầu kỳ cho hệ thống tính giá.</div>
    <div class="bar"><div class="sp"></div><button class="btn pri" style="background:var(--green);border-color:var(--green)" ${done.length?'':'disabled'} onclick="kkDong()">🔒 Chốt kỳ & chuyển ${done.length} mã sang đầu kỳ</button></div>`;
 }
+function napTKExcel(){ var el0=el('napTKFile'); if(el0){el0.value='';el0.click();} }
+function napTKFileChosen(inp){ var f=inp.files&&inp.files[0]; if(!f)return;
+  var rd=new FileReader();
+  rd.onload=function(e){ try{
+      var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      var counts={};
+      ['Thành phẩm','Nguyên liệu'].forEach(function(sn){ var ws=wb.Sheets[sn]; if(!ws)return;
+        XLSX.utils.sheet_to_json(ws,{header:1,defval:''}).forEach(function(r){ var sku=(''+((r&&r[1])||'')).trim(); var v=r&&r[4];
+          if(sku && sku!=='SKU (Mã SP)' && v!=='' && v!=null && !isNaN(Number(v))) counts[sku]=Number(v); }); });
+      napTKApply(counts);
+    }catch(err){ alert('Không đọc được file Excel: '+err); } inp.value=''; };
+  rd.readAsArrayBuffer(f);
+}
+function napTKApply(counts){ var keys=Object.keys(counts); if(!keys.length){alert('File không có số tồn nào (cột "Số lượng thực").');return;}
+  var have={}; DATA.products.forEach(function(p){have[p.code]=1;});
+  var matched=keys.filter(function(k){return have[k];}); var unmatched=keys.filter(function(k){return !have[k];});
+  if(!matched.length){alert('Không mã nào trong file khớp hệ thống. Kiểm tra lại cột SKU.');return;}
+  if(!confirm('Đặt TỒN ĐẦU KỲ THÁNG 8 = số trong file cho '+matched.length+' mã?\n(CHỈ đổi đầu kỳ; KHÔNG đụng bán hàng / xuất kho.)\n'+(unmatched.length?('• '+unmatched.length+' mã không khớp (bỏ qua): '+unmatched.slice(0,8).join(', ')+(unmatched.length>8?'…':'')+'\n'):'')+'Nên ☁ Sao lưu ngay trước. Tiếp tục?'))return;
+  var now=Date.now();
+  matched.forEach(function(c){ var v=+counts[c]||0; var r=DATA.ton.find(function(x){return x.code===c;});
+    if(r){ r.dk=v; r._ts=now; } else DATA.ton.push({code:c,dk:v,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0,_ts:now}); });
+  save(); if(typeof rTonkho==='function')rTonkho();
+  alert('✓ Đã đặt tồn đầu kỳ tháng 8 = số trong file cho '+matched.length+' mã.'+(unmatched.length?('\n• '+unmatched.length+' mã không khớp (bỏ qua).'):'')+'\n\nVào Theo dõi tồn → Tháng 8 kiểm tra đầu kỳ.');
+}
 function dongKyNhanh(){ ensureKK();
   var ymClose='2026-07', ymNext='2026-08';
   DATA.tonPts=DATA.tonPts||{};DATA.tonKy=DATA.tonKy||{};DATA.kyArchive=DATA.kyArchive||{};
@@ -9089,7 +9119,7 @@ function dongKyNhanh(){ ensureKK();
     DATA.kyArchive[ymClose].rows[c]={dk:D7,moi:+mv.moi||0,nb:+mv.nb||0,hd:+mv.hd||0,bh:+mv.bh||0,qt:+mv.qt||0,sx:+mv.sx||0};
     var out=(+mv.nb||0)+(+mv.hd||0)+(+mv.bh||0)+(+mv.qt||0)+(+mv.sx||0);
     var end=D7+(+mv.moi||0)-out;
-    var tr=DATA.ton.find(function(x){return x.code===c;}); if(tr){tr.dk=end;tr.moi=0;tr.nb=0;tr.hd=0;tr.bh=0;tr.qt=0;tr.sx=0;tr._ts=now;} else DATA.ton.push({code:c,dk:end,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0,_ts:now});
+    var tr=DATA.ton.find(function(x){return x.code===c;}); if(tr){tr.dk=end;tr.moi=0;tr.nb=0;tr.hd=0;tr.bh=0;tr.qt=0;tr.sx=0;tr.tonKy=ymNext;tr.tonPts=T;tr._ts=now;} else DATA.ton.push({code:c,dk:end,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0,tonKy:ymNext,tonPts:T,_ts:now});
     DATA.tonPts[c]=T; DATA.tonKy[c]=ymNext; n++;
   });
   DATA.kk.chotTs=T; DATA.kk.snap={}; DATA.kk.thuc={}; DATA.kk.done={}; DATA.kk._tsHead=now;
@@ -9133,7 +9163,7 @@ function kkDong(){ ensureKK();var done=Object.keys(DATA.kk.done).filter(c=>DATA.
   // 2) Đặt đầu kỳ mới = Tồn thực tế (quy về lúc chốt) + mốc riêng cho TỪNG mã đã xác nhận; mã khác KHÔNG đụng tới
   done.forEach(function(c){
     var tc=DATA.kk.thuc[c]; var dk=(tc!=null&&tc!=='')?Number(tc):(DATA.kk.snap[c]||0);
-    var r=DATA.ton.find(x=>x.code===c); if(r){r.dk=dk;r.moi=0;r.nb=0;r.hd=0;r.bh=0;r.qt=0;r.sx=0;} else DATA.ton.push({code:c,dk:dk,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0});
+    var r=DATA.ton.find(x=>x.code===c); if(r){r.dk=dk;r.moi=0;r.nb=0;r.hd=0;r.bh=0;r.qt=0;r.sx=0;r.tonKy=ymNext;r.tonPts=chotTs;r._ts=Date.now();} else DATA.ton.push({code:c,dk:dk,moi:0,nb:0,hd:0,bh:0,qt:0,sx:0,tonKy:ymNext,tonPts:chotTs,_ts:Date.now()});
     DATA.tonPts[c]=chotTs;   // mốc kỳ mới của riêng mã c = lúc bấm Chốt
     DATA.tonKy[c]=ymNext;    // tháng hiện hành mới của mã c
   });
