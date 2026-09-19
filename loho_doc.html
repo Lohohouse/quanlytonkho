@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LOHO HOUSE — Tài liệu kỹ thuật hệ thống</title>
+<style>
+:root{color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:#f7f8fa;color:#1a1d23;font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+.layout{display:flex;max-width:1400px;margin:0 auto;gap:0}
+nav{width:250px;flex:none;background:#fff;border-right:1px solid #e3e6ea;padding:20px 0;position:sticky;top:0;height:100vh;overflow-y:auto}
+nav .brand{padding:0 20px 14px;border-bottom:1px solid #eef0f3;margin-bottom:12px}
+nav .brand b{display:block;font-size:15px;color:#0f4c81}
+nav .brand span{font-size:11px;color:#6b7280}
+nav a{display:block;padding:6px 20px;color:#374151;text-decoration:none;font-size:13px;border-left:3px solid transparent}
+nav a:hover{background:#f3f6fa;color:#0f4c81}
+nav a.grp{margin-top:12px;font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#9aa1ab;pointer-events:none;padding-bottom:2px}
+main{flex:1;padding:32px 40px 80px;min-width:0}
+h1{font-size:26px;margin:0 0 4px;color:#0f4c81}
+.sub{color:#6b7280;font-size:13px;margin-bottom:28px}
+h2{font-size:20px;margin:40px 0 12px;padding-top:14px;border-top:2px solid #e3e6ea;color:#0f4c81}
+h3{font-size:16px;margin:26px 0 8px;color:#1f2937}
+h4{font-size:14px;margin:18px 0 6px;color:#374151}
+p{margin:8px 0}
+table{border-collapse:collapse;width:100%;margin:12px 0;font-size:13.5px;background:#fff}
+th,td{border:1px solid #e3e6ea;padding:7px 10px;text-align:left;vertical-align:top}
+th{background:#eef2f7;font-weight:600;color:#243b53}
+tr:nth-child(even) td{background:#fbfcfd}
+code{background:#eef1f5;padding:1px 5px;border-radius:4px;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#b3261e}
+pre{background:#1e2430;color:#e6edf3;padding:14px 16px;border-radius:8px;overflow-x:auto;font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace}
+pre code{background:none;color:inherit;padding:0}
+.box{border-left:4px solid;border-radius:0 8px 8px 0;padding:12px 16px;margin:14px 0;font-size:13.5px}
+.warn{background:#fff7e6;border-color:#e0a336}
+.danger{background:#fdeeeb;border-color:#c0392b}
+.ok{background:#e9f7ef;border-color:#1e8e4e}
+.info{background:#eef6ff;border-color:#3b82f6}
+.box b{display:block;margin-bottom:4px}
+ul,ol{margin:8px 0;padding-left:22px}
+li{margin:4px 0}
+.tag{display:inline-block;background:#eef2f7;border:1px solid #d5dce5;border-radius:20px;padding:1px 9px;font-size:11.5px;color:#334155;margin-right:4px}
+.no{color:#c0392b;font-weight:600}
+.yes{color:#1e8e4e;font-weight:600}
+hr{border:0;border-top:1px solid #e3e6ea;margin:32px 0}
+footer{margin-top:50px;padding-top:18px;border-top:1px solid #e3e6ea;font-size:12.5px;color:#6b7280}
+@media(max-width:900px){.layout{flex-direction:column}nav{width:100%;height:auto;position:static;border-right:0;border-bottom:1px solid #e3e6ea}main{padding:24px 18px 60px}}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav>
+  <div class="brand"><b>LOHO HOUSE</b><span>Tài liệu kỹ thuật · 18/09/2026</span></div>
+  <a href="#tomtat">Tóm tắt nhanh</a>
+  <a class="grp">A · ERP Quản lý kho</a>
+  <a href="#a1">A1 · Kiến trúc</a>
+  <a href="#a2">A2 · Thành phần</a>
+  <a href="#a3">A3 · Endpoint backend</a>
+  <a href="#a4">A4 · Mô hình dữ liệu</a>
+  <a href="#a5">A5 · Cơ chế đồng bộ ⭐</a>
+  <a href="#a6">A6 · Tích hợp Haravan ⭐</a>
+  <a href="#a7">A7 · Kỳ &amp; tồn kho</a>
+  <a href="#a8">A8 · Sự cố đã gặp ⭐</a>
+  <a href="#a9">A9 · Lưu trữ đơn cũ</a>
+  <a href="#a10">A10 · Module giao diện</a>
+  <a class="grp">B · Dashboard doanh thu</a>
+  <a href="#b1">B1 · Nguồn dữ liệu</a>
+  <a href="#b2">B2 · Bẫy dữ liệu</a>
+  <a href="#b3">B3 · Cập nhật dashboard</a>
+  <a class="grp">C · Vận hành</a>
+  <a href="#c1">C1 · Triển khai code</a>
+  <a href="#c2">C2 · Kiểm tra sức khoẻ</a>
+  <a href="#c3">C3 · Lịch bảo trì</a>
+  <a href="#c4">C4 · Danh sách cấm ⛔</a>
+  <a href="#c5">C5 · Khắc phục sự cố</a>
+  <a href="#pl">Phụ lục · Tra hàm</a>
+</nav>
+
+<main>
+<h1>LOHO HOUSE — Tài liệu kỹ thuật hệ thống</h1>
+<div class="sub">Bàn giao cho IT · Cập nhật 18/09/2026 · Đối chiếu theo mã nguồn <code>main2.html</code></div>
+
+<div class="box info"><b>Cách dùng tài liệu này</b>
+Có thể đọc trực tiếp trên trang, hoặc lưu lại nạp vào Claude làm ngữ cảnh khi cần sửa hệ thống.</div>
+
+<h2 id="tomtat">0 · Tóm tắt nhanh</h2>
+<p>Công ty vận hành <b>2 hệ thống độc lập</b>, không dùng chung dữ liệu:</p>
+<table>
+<tr><th style="width:150px"></th><th>A — ERP Quản lý kho</th><th>B — Dashboard doanh thu</th></tr>
+<tr><td><b>Mục đích</b></td><td>Kéo đơn, xuất kho, tồn kho, kiểm kho</td><td>Báo cáo doanh thu, phí sàn, danh mục</td></tr>
+<tr><td><b>Giao diện</b></td><td>Web app 1 file HTML (~600 KB, không framework)</td><td>File HTML tĩnh</td></tr>
+<tr><td><b>Nơi chạy</b></td><td>GitHub Pages <code>lohohouse.github.io</code></td><td>Mở file local</td></tr>
+<tr><td><b>Backend</b></td><td>Google Apps Script</td><td>Script Python chạy theo lịch</td></tr>
+<tr><td><b>Kho dữ liệu</b></td><td>Google Sheet — tab ẩn <code>_APP_STATE</code> (JSON)</td><td>Google Sheet "Thống kê đơn hàng 2026" (bảng)</td></tr>
+<tr><td><b>Nguồn đơn</b></td><td><b>Haravan API</b> — tự động 5 phút/lần</td><td>Export thủ công từ các sàn</td></tr>
+</table>
+<div class="box warn"><b>Lưu ý</b>Hai hệ thống <b>KHÔNG đồng bộ với nhau</b>. Sửa bên này không ảnh hưởng bên kia.</div>
+
+<hr>
+<h2 id="a1">A1 · Kiến trúc tổng thể</h2>
+<pre><code>┌──────────────┐   REST    ┌──────────────────┐
+│  Haravan     │──────────▶│  Google Apps     │
+│  (sàn TMĐT)  │  pull 5'  │  Script (backend)│
+└──────────────┘           └────────┬─────────┘
+                                    │ đọc/ghi
+                                    ▼
+                          ┌────────────────────────┐
+                          │ Google Sheet           │
+                          │  • _APP_STATE (ẩn)     │◀── nguồn sự thật
+                          │  • DonHang, TheoDoiTon…│    (tab để xem)
+                          │  • DonHang_LuuTru      │
+                          └────────┬───────────────┘
+                                   │ HTTPS (doGet / doPost)
+                     ┌─────────────┼─────────────┐
+                     ▼             ▼             ▼
+               ┌─────────┐   ┌─────────┐   ┌─────────┐
+               │ Máy chủ │   │ Máy NV1 │   │ Máy NV2 │
+               └─────────┘   └─────────┘   └─────────┘
+              localStorage['loho-kho'] trên TỪNG máy</code></pre>
+
+<div class="box danger"><b>Điểm mấu chốt — đọc kỹ</b>
+Hệ thống <b>không có server ứng dụng</b>. Mỗi trình duyệt giữ <b>bản sao đầy đủ</b> toàn bộ dữ liệu trong <code>localStorage</code>, rồi đẩy/kéo về Google Sheet. Đây là nguồn gốc của phần lớn sự cố — xem mục A8.</div>
+
+<h2 id="a2">A2 · Thành phần &amp; nơi lưu</h2>
+<table>
+<tr><th style="width:170px">Thành phần</th><th>Vị trí</th><th>Ghi chú</th></tr>
+<tr><td><b>Frontend</b></td><td>GitHub repo → GitHub Pages <code>lohohouse.github.io</code></td><td>1 file <code>index.html</code>, tự chứa, không build</td></tr>
+<tr><td><b>Backend</b></td><td>Apps Script project <b>"LOHO - Quản lý kho"</b></td><td>Gắn với Google Sheet, deploy dạng Web App</td></tr>
+<tr><td><b>File Apps Script</b></td><td><code>Mã.gs</code> (chính) · <code>chuandoan.gs</code> · <code>luutru.gs</code></td><td></td></tr>
+<tr><td><b>Kho dữ liệu</b></td><td>Tab <code>_APP_STATE</code> (bị ẩn)</td><td>1 ô chứa toàn bộ JSON</td></tr>
+<tr><td><b>Tab để xem</b></td><td><code>DonHang</code>, <code>TheoDoiTon</code>, <code>XuatNhapSX</code>, <code>HoanHuy</code>, <code>KhoSonLe</code>…</td><td>Backend sinh ra, <b>không phải nguồn</b></td></tr>
+<tr><td><b>Lưu trữ</b></td><td>Tab <code>DonHang_LuuTru</code></td><td>Đơn cũ đã dọn khỏi app</td></tr>
+<tr><td><b>Backup</b></td><td>Thư mục Google Drive (<code>_bkFolder_()</code>)</td><td>File JSON theo mốc thời gian</td></tr>
+</table>
+<p><b>Hiện tab ẩn:</b> Google Sheet → menu <b>Xem → Trang tính ẩn</b>.</p>
+<div class="box danger"><b>Cấm</b>Tuyệt đối không sửa tay ô JSON trong <code>_APP_STATE</code>.</div>
+
+<h2 id="a3">A3 · Endpoint backend</h2>
+<p>Web App URL dạng <code>https://script.google.com/macros/s/&lt;ID&gt;/exec</code> — dán vào app ở ô ☁ → "Link Web App".</p>
+
+<h3>doGet — đọc</h3>
+<table>
+<tr><th style="width:160px"><code>?action=</code></th><th>Trả về</th></tr>
+<tr><td><code>ping</code></td><td><code>{ok:true, msg:'LOHO sync alive', ts}</code> — test kết nối</td></tr>
+<tr><td><code>load</code></td><td><code>{ok:true, state:&lt;JSON toàn bộ&gt;, ts}</code> — app kéo dữ liệu về</td></tr>
+<tr><td><code>stats</code></td><td>Thống kê tóm tắt</td></tr>
+<tr><td><code>order</code></td><td>Tra cứu 1 đơn</td></tr>
+<tr><td><code>havcount</code></td><td>Đếm đơn bên Haravan</td></tr>
+<tr><td><code>keo</code></td><td><b>Kích hoạt kéo đơn Haravan ngay</b></td></tr>
+</table>
+
+<h3>doPost — ghi</h3>
+<p>Body JSON: <code>{ state, tables, deletes, delTs }</code></p>
+<pre><code>LockService.getScriptLock().waitLock(28000)   // chống ghi đè đồng thời
+  → _readState_()                              // đọc state hiện tại
+  → _backupPreMerge_(curStr)                   // backup trước khi gộp
+  → _mergeState2_(current, incoming, deletes, delTs)   // GỘP — xem A5
+  → _writeState_(JSON.stringify(merged))
+  → _writeTables_(body.tables)                 // sinh các tab để xem</code></pre>
+
+<h2 id="a4">A4 · Mô hình dữ liệu (object <code>DATA</code>)</h2>
+<p>Toàn bộ hệ thống nằm trong 1 object JS, ~46 khoá.</p>
+
+<h3>Nhóm giao dịch (mảng bản ghi)</h3>
+<table>
+<tr><th style="width:120px">Khoá</th><th>Nội dung</th><th style="width:170px">Khoá định danh</th></tr>
+<tr><td><code>orders</code></td><td>Dòng đơn hàng (1 SKU = 1 dòng)</td><td><code>madon</code> + <code>sku</code></td></tr>
+<tr><td><code>nx</code></td><td>Phiếu Xuất–Nhập sản xuất</td><td><code>ma</code></td></tr>
+<tr><td><code>xnb</code></td><td>Xuất nội bộ</td><td><code>id</code></td></tr>
+<tr><td><code>xhd</code></td><td>Xuất hoạt động</td><td><code>id</code></td></tr>
+<tr><td><code>sonLe</code></td><td>Kho sơn lẻ (sơn đã chiết màu, thu hồi từ đơn hủy/hoàn)</td><td><code>id</code></td></tr>
+<tr><td><code>products</code></td><td>Danh mục sản phẩm — 3 loại: <span class="tag">NVL</span><span class="tag">Thành phẩm</span><span class="tag">TM (tinh màu)</span></td><td><code>code</code></td></tr>
+<tr><td><code>ton</code></td><td>Dòng tồn kho theo mã</td><td><code>code</code></td></tr>
+<tr><td><code>gifts</code></td><td>Chương trình quà tặng</td><td><code>id</code></td></tr>
+<tr><td><code>huHong</code></td><td>Hàng hư hỏng</td><td><code>id</code></td></tr>
+</table>
+
+<h3>Nhóm cấu hình / tổng hợp (object)</h3>
+<table>
+<tr><th style="width:190px">Khoá</th><th>Nội dung</th></tr>
+<tr><td><code>hoan</code></td><td>Hoàn / Hủy theo mã đơn</td></tr>
+<tr><td><code>kk</code></td><td>Phiếu kiểm kho đang làm (<code>snap, kk1, kk2, kk3, thuc, done, bd, nv</code>…)</td></tr>
+<tr><td><code>kkHistory</code></td><td>Lịch sử kiểm kho các kỳ đã đóng</td></tr>
+<tr><td><code>kyArchive[ym].rows[code]</code></td><td><b>Ảnh tồn từng mã của kỳ đã đóng</b></td></tr>
+<tr><td><code>thangTom[ym]</code></td><td><b>Tóm tắt doanh thu / số đơn từng tháng</b></td></tr>
+<tr><td><code>tonPts[code]</code></td><td>Mốc thời gian đầu kỳ của từng mã</td></tr>
+<tr><td><code>tonKy[code]</code></td><td>Kỳ hiện hành của từng mã (vd <code>2026-09</code>)</td></tr>
+<tr><td><code>kkQC[code]</code></td><td>Quy cách thùng (số lượng/thùng) dùng khi kiểm kho</td></tr>
+<tr><td><code>kkCfg</code></td><td>Ngưỡng tự gắn cờ nghi vấn (<code>pct</code>, <code>abs</code>)</td></tr>
+<tr><td><code>skumap</code></td><td>Ánh xạ SKU sàn → SKU kho</td></tr>
+<tr><td><code>bom</code></td><td>Định mức combo (1 combo = nhiều SKU con)</td></tr>
+<tr><td><code>tmKK, tmHistory, tmChotTs</code></td><td>Kiểm kho &amp; lịch sử tinh màu</td></tr>
+<tr><td><code>cats, conv, plan, tonCfg</code></td><td>Danh mục, quy đổi m², kế hoạch, ngưỡng cảnh báo</td></tr>
+<tr><td><code>_kts</code></td><td><b>Dấu thời gian cho từng khoá cấu hình</b> — xem A5</td></tr>
+</table>
+
+<h3>Trường đặc biệt trên bản ghi</h3>
+<table>
+<tr><th style="width:230px">Trường</th><th>Ý nghĩa</th></tr>
+<tr><td><code>_ts</code></td><td>Thời điểm sửa lần cuối — dùng để gộp</td></tr>
+<tr><td><code>_del</code></td><td>Thẻ đánh dấu đã xoá (tombstone)</td></tr>
+<tr><td><code>_ct</code></td><td>Thời điểm tạo/xuất thực tế — dùng chia kỳ</td></tr>
+<tr><td><code>_he</code></td><td>SKU kho đã ánh xạ</td></tr>
+<tr><td><code>ton[].tonKy / tonPts / archYm / arch</code></td><td>Bản sao thông tin kỳ <b>gắn trên dòng tồn</b> — gia cố chống ghi đè</td></tr>
+</table>
+
+<h2 id="a5">A5 · ⭐ Cơ chế đồng bộ — phần quan trọng nhất</h2>
+<h3>Nguyên lý</h3>
+<pre><code>syncPush()  → POST {state, deletes}  → _mergeState2_()  → _APP_STATE
+syncPull()  ← GET ?action=load       ← _readState_()    ← _APP_STATE</code></pre>
+<ul>
+<li>Tự động kéo về mỗi <b>3 phút</b> (<code>syncAutoPull</code>, 180000 ms)</li>
+<li>Bỏ qua khi: đang có thay đổi chưa lưu · đang gõ vào ô nhập · đang mở popup</li>
+<li>Tự đẩy lên sau <b>1,5 giây</b> kể từ thay đổi cuối (<code>syncSchedule</code>, debounce)</li>
+</ul>
+
+<h3>Hai chế độ gộp</h3>
+<h4>(1) Mục có khoá gộp — gộp theo TỪNG bản ghi</h4>
+<p>Định nghĩa ở <code>MERGE_KEYS</code> (Apps Script) và <code>SYNC_MK</code> (app) — <b>phải khớp nhau</b>:</p>
+<pre><code>orders  : 'o:'   + madon + '|' + sku
+nx      : 'nx:'  + ma
+sonLe   : 'sl:'  + id
+xnb     : 'xnb:' + id
+xhd     : 'xhd:' + id
+products: 'p:'   + code
+ton     : 't:'   + code
+gifts   : 'g:'   + id        // bổ sung sau
+huHong  : 'hh:'  + id        // bổ sung sau</code></pre>
+<p>Quy tắc: cùng khoá → <b>bản ghi có <code>_ts</code> lớn hơn thắng</b>. Khác khoá → giữ cả hai.</p>
+
+<h4>(2) Mục KHÔNG có khoá gộp — so dấu thời gian <code>_kts</code></h4>
+<p>Các khoá <code>hoan</code>, <code>skumap</code>, <code>kkHistory</code>, <code>kyArchive</code>, <code>cats</code>, <code>bom</code>, <code>tonKy</code>, <code>tonPts</code>, <code>weekCheck</code>… là object nguyên khối.</p>
+<ul>
+<li>App ghi <code>DATA._kts[&lt;khoá&gt;] = Date.now()</code> mỗi khi khoá đó đổi</li>
+<li>Server so <code>_kts</code>: bên nào mới hơn thì giữ</li>
+<li><b>Máy chạy code cũ (chưa có <code>_kts</code>) không ghi đè được bản mới</b></li>
+</ul>
+
+<h4>(3) Kiểm kho (<code>kk</code>)</h4>
+<p>Cơ chế riêng <code>_mergeKK_</code>: LWW theo từng SKU, có tombstone, không bao giờ xoá trắng.</p>
+
+<h3>Xoá bản ghi</h3>
+<p>App so <code>SYNC.base</code> (ảnh chụp lần đồng bộ trước) với <code>DATA</code> hiện tại → khoá nào biến mất thì đưa vào <code>deletes</code> → server đánh dấu <code>_del = true</code> + <code>_ts = delTs</code>.</p>
+<p>Thẻ <code>_del</code> <b>chặn máy cũ làm bản ghi sống lại</b>. App lọc bỏ <code>_del</code> khi tải về.</p>
+
+<div class="box danger"><b>⚠️ Quy tắc vận hành bắt buộc</b>
+<table style="margin:8px 0 0">
+<tr><th>Tình huống</th><th>Đúng</th><th>Sai</th></tr>
+<tr><td>Máy có dữ liệu cũ</td><td class="yes">Bấm ☁ Tải lại từ Sheets</td><td class="no">Bấm Sao lưu → đẩy dữ liệu cũ đè lên</td></tr>
+<tr><td>Vừa sửa dữ liệu quan trọng</td><td class="yes">Đợi thấy "Đã lưu" rồi mới F5</td><td class="no">F5 ngay → mất thay đổi</td></tr>
+<tr><td>Sau khi deploy code mới</td><td class="yes">Mọi máy F5 rồi Tải lại từ Sheets</td><td class="no">Chỉ 1 máy cập nhật</td></tr>
+</table></div>
+
+<h2 id="a6">A6 · ⭐ Tích hợp Haravan</h2>
+<h3>Cấu hình (đầu file <code>Mã.gs</code>)</h3>
+<pre><code>var HARAVAN_TOKEN = "&lt;token&gt;";                  // ⚠️ bí mật — không commit công khai
+var HARAVAN_API   = "https://apis.haravan.com/com";
+var TZ            = "GMT+7";</code></pre>
+<div class="box warn"><b>Bảo mật</b>Nên chuyển token sang <b>Script Properties</b> thay vì viết thẳng trong code:<br>
+<code>var HARAVAN_TOKEN = PropertiesService.getScriptProperties().getProperty('HARAVAN_TOKEN');</code><br>
+Cài ở: Apps Script → ⚙️ Cài đặt dự án → Thuộc tính tập lệnh.</div>
+
+<h3>Hàm kéo đơn</h3>
+<p><code>keoDon(daysBack)</code> — kéo đơn N ngày gần nhất. Kích hoạt bằng 3 cách:</p>
+<ol>
+<li><b>Tự động</b> — trigger Apps Script, mỗi <b>5 phút</b></li>
+<li><b>Tay trong app</b> — nút "Kéo đơn từ Haravan" (gọi <code>?action=keo</code>)</li>
+<li><b>Tay trong Apps Script</b> — chạy hàm trực tiếp</li>
+</ol>
+
+<h3>Ánh xạ dữ liệu Haravan → hệ thống</h3>
+<table>
+<tr><th style="width:110px">Trường</th><th style="width:300px">Lấy từ Haravan</th><th>Ghi chú</th></tr>
+<tr><td><code>madon</code></td><td><code>order.name</code> / mã đơn</td><td></td></tr>
+<tr><td><code>ngay</code></td><td><code>Utilities.formatDate(new Date(o.created_at), TZ, "yyyy-MM-dd")</code></td><td class="no">Bắt buộc ép GMT+7. Nếu dùng <code>created_at.slice(0,10)</code> sẽ lấy giờ UTC → đơn đặt buổi tối bị lùi 1 ngày (lỗi đã xảy ra 18/06/2026)</td></tr>
+<tr><td><code>kenh</code></td><td>Nguồn đơn</td><td>Shopee / TikTok / Lazada / Website</td></tr>
+<tr><td><code>sku</code></td><td><code>line_items[].sku</code></td><td></td></tr>
+<tr><td><code>sl</code></td><td><code>line_items[].quantity</code></td><td>Gộp trùng SKU: mỗi SKU 1 dòng, <code>sl</code> = tổng</td></tr>
+<tr><td><code>tien</code></td><td>Tiền khách trả</td><td></td></tr>
+<tr><td><code>dvvc</code></td><td><code>getCarrier_(o)</code> ← <code>fulfillments[].tracking_company</code></td><td></td></tr>
+<tr><td><code>vd</code></td><td><code>getTrack_(o)</code> ← <code>fulfillments[].tracking_number</code></td><td></td></tr>
+<tr><td><code>ttd</code></td><td>Trạng thái đơn</td><td><code>"Da huy"</code> / <code>"Da co DVVC"</code> / <code>"Cho lay hang"</code></td></tr>
+<tr><td><code>tthd</code></td><td>Quy đổi cho app</td><td><code>'huy'</code> / <code>'giao'</code> / <code>'cho'</code></td></tr>
+<tr><td><code>tt</code></td><td>Trạng thái kho</td><td>Dòng mới luôn = <code>"Chua xuat"</code></td></tr>
+</table>
+
+<h3>Ngữ nghĩa UPSERT — rất quan trọng</h3>
+<p>Khoá đối chiếu: <b><code>madon</code> + <code>sku</code></b>. Khi kéo lại, hệ thống <b>GIỮ NGUYÊN</b> các trường do kho quản lý: <code>tt</code> · <code>dot</code> · <code>_he</code> · <code>_ct</code>.</p>
+<div class="box ok"><b>Kết luận</b>Kéo đơn lại nhiều lần <b>KHÔNG bao giờ trừ kho hai lần</b>. Chỉ cập nhật trạng thái đơn và thông tin vận chuyển.</div>
+
+<h3>Cổng chặn xuất kho</h3>
+<pre><code>function xkReadyO(o){
+  return o.tthd === 'giao' || (xkAllowNoVC &amp;&amp; o.tthd !== 'huy');
+}</code></pre>
+<p>Mặc định <b>chỉ xuất được đơn đã có ĐVVC</b>. Bật công tắc <code>⚠ Cho xuất đơn chưa có VC</code> ở tab ④ để xuất sớm — dùng cho đơn sàn đã xác nhận nhưng Haravan chưa cập nhật vận đơn.</p>
+
+<h2 id="a7">A7 · Logic kỳ kế toán &amp; tồn kho</h2>
+<h3>Chu kỳ</h3>
+<p>Chốt <b>ngày 25</b>, kỳ mới bắt đầu <b>ngày 26</b>. Ví dụ: kỳ <code>2026-09</code> = từ <b>26/08</b> đến <b>25/09</b>.</p>
+<p>Hàm: <code>curKyYm()</code> · <code>_nextYm()</code> · <code>_chotTs()</code> · <code>_ymOfDate()</code></p>
+
+<h3>Công thức tồn</h3>
+<pre><code>function tonCalc(r){
+  var out = r.nb + r.hd + r.bh + r.qt + r.sx + (r.hh || 0);
+  var ton = r.dk + r.moi - out;
+  return { out: out, ton: ton };
+}</code></pre>
+<table>
+<tr><th style="width:80px">Mã</th><th>Ý nghĩa</th></tr>
+<tr><td><code>dk</code></td><td>Tồn đầu kỳ</td></tr>
+<tr><td><code>moi</code></td><td>Nhập kho</td></tr>
+<tr><td><code>bh</code></td><td>Xuất bán hàng</td></tr>
+<tr><td><code>nb</code></td><td>Xuất nội bộ</td></tr>
+<tr><td><code>hd</code></td><td>Xuất hoạt động</td></tr>
+<tr><td><code>qt</code></td><td>Xuất quà tặng</td></tr>
+<tr><td><code>sx</code></td><td>Xuất sản xuất</td></tr>
+<tr><td><code>hh</code></td><td><b>Xuất hàng hư hỏng</b> (bổ sung sau)</td></tr>
+</table>
+
+<h3>Ba hàm tính tồn</h3>
+<table>
+<tr><th style="width:300px">Hàm</th><th>Dùng cho</th></tr>
+<tr><td><code>computeTon()</code></td><td>Kỳ hiện hành, không giới hạn trên. <b>Có cache</b> theo <code>_dataVer</code></td></tr>
+<tr><td><code>computeTonMonth(mon)</code></td><td>Xem theo tháng cụ thể (có cửa sổ thời gian)</td></tr>
+<tr><td><code>computeTonWindow(startTs, endTs, seedDk, seedMoi)</code></td><td>Khoảng thời gian bất kỳ</td></tr>
+</table>
+<p><b>Kỳ theo từng mã:</b> mỗi SKU có mốc kỳ riêng (<code>tonPts[code]</code>, <code>tonKy[code]</code>) — cho phép đóng kỳ từng phần, không bắt buộc đóng cả kho cùng lúc.</p>
+
+<h3>Quy trình đóng kỳ — 3 bước, đúng thứ tự</h3>
+<ol>
+<li><b>① Chốt kiểm kho 📷</b> — chụp tồn lý thuyết, ghi <code>chotTs = Date.now()</code> (đúng giây bấm)</li>
+<li><b>② Tạo bản kiểm kho</b> — nhập số đếm → <b>✓ Xác nhận số lượng cuối cùng</b> (cấp lệnh LKK-xxxx)</li>
+<li><b>③ Đóng kỳ &amp; chuyển kỳ 🔒</b> — lưu <code>kyArchive[ym]</code>, đặt tồn thực tế thành đầu kỳ mới, gắn <code>tonKy</code> = kỳ sau</li>
+</ol>
+<div class="box warn"><b>Lưu ý</b>Mốc <code>chotTs</code> chia ranh giới kỳ theo <b>giờ xuất thực tế của đơn</b> (<code>_ct</code>), không theo ngày đặt hàng.</div>
+
+<h3>Nhập số đếm theo Lẻ + Thùng</h3>
+<p>Ô Kiểm 1/2/3 cho nhập: <code>Lẻ</code> + nhiều dòng <code>[số thùng] × [quy cách]</code>, tự cộng tổng. Quy cách lưu ở <code>DATA.kkQC[code]</code>, lần sau tự điền.</p>
+<p><b>Cờ nghi vấn tự động</b> (<code>kkNVauto</code>): KK1≠KK2 · lệch tồn vượt ngưỡng (<code>DATA.kkCfg</code>) · đếm 0 mà sổ có · <b>nghi đếm thùng thay vì đơn vị lẻ</b> (<code>đếm × quy cách ≈ sổ</code>).</p>
+
+<h2 id="a8">A8 · ⭐ Sự cố đã gặp &amp; nguyên nhân</h2>
+<div class="box danger"><b>Đọc kỹ phần này trước khi sửa bất cứ gì</b></div>
+
+<h3>Sự cố 1 — Mất dữ liệu do đồng bộ đa máy</h3>
+<p><b>Triệu chứng:</b> chương trình quà tặng / tồn kho / hoàn hủy biến mất sau khi máy khác đồng bộ.</p>
+<p><b>Nguyên nhân:</b> ~37 khoá cấu hình bị ghi đè nguyên khối — máy nào đẩy sau thì thắng, kể cả máy giữ dữ liệu cũ.</p>
+<p><b>Đã sửa:</b> thêm <code>_kts</code> (dấu thời gian từng khoá) + <code>_mergeState2_</code> ở backend.</p>
+<p><b>Còn lại:</b> mọi máy phải chạy cùng phiên bản code.</p>
+
+<h3>Sự cố 2 — Chương trình quà tặng nhân bản (64 bản)</h3>
+<p><b>Nguyên nhân kép:</b></p>
+<ol>
+<li>Sau khi đưa <code>gifts</code> vào nhóm gộp theo bản ghi → hợp nhất (union) → tích tụ, không tự xoá</li>
+<li>Hàm <code>khoiPhucQuaTang()</code> so khớp theo <code>id</code>, nhưng chương trình cũ trong backup <b>không có <code>id</code></b> → không nhận ra trùng → thêm mới</li>
+</ol>
+<p><b>Hậu quả:</b> nhiều bản cùng "Đang chạy" → <b>1 đơn được tặng quà nhiều lần</b>.</p>
+<p><b>Đã sửa:</b> gộp trùng theo chữ ký (tên + ngày + giờ + bậc + quà), 64 → 20 chương trình.</p>
+<div class="box danger"><b>⛔ KHÔNG chạy lại <code>khoiPhucQuaTang()</code></b></div>
+
+<h3>Sự cố 3 — Lệch kỳ tháng 7 (tồn âm, doanh thu biến mất)</h3>
+<p><b>Nguyên nhân:</b> <code>chotTs</code> bị script nạp dữ liệu cũ ghi đè thành <code>25/06 10:30</code> — bằng đúng mốc đầu kỳ → cửa sổ tính tồn co về rỗng.</p>
+<p><b>Đã sửa:</b></p>
+<ul>
+<li>Nút "📷 Chốt kiểm kho" giờ ghi <b>đúng giây bấm</b>, bỏ ô "Ngày chốt" (trước đây lấy theo ngày chọn → dễ sai)</li>
+<li>Ảnh tồn tháng 7 dựng lại bằng cách <b>suy ngược từ đầu kỳ tháng 8</b> (số đếm tay thực tế):<br><code>đầu T7 = đầu T8 − nhập T7 + xuất T7</code></li>
+<li>Lưu <code>arch</code> + <code>archYm</code> <b>trên từng dòng tồn</b> để không bị ghi đè</li>
+</ul>
+
+<h3>Sự cố 4 — Hệ thống nặng, đứng máy</h3>
+<p><b>Nguyên nhân:</b> 28.680 dòng đơn ≈ <b>11,2 MB</b> JSON. Mỗi thao tác đều <code>JSON.stringify</code> toàn bộ.</p>
+<p><b>Đã xử lý:</b> lưu trữ đơn cũ (xem A9). 11.243 KB → <b>4.412 KB</b>.</p>
+
+<h3>Sự cố 5 — Xuất Excel thiếu dữ liệu</h3>
+<p><b>Nguyên nhân:</b> <code>XLSX.utils.table_to_book()</code> chỉ lấy text hiển thị, không lấy giá trị ô <code>&lt;input&gt;</code>/<code>&lt;select&gt;</code>. Số dạng <code>11.157</code> bị hiểu thành 11,157 (thập phân).</p>
+<p><b>Đã sửa:</b> <code>exportXLSX()</code> clone bảng, đọc <code>.value</code> của ô nhập, chuyển số Việt Nam sang số thật (<code>_xlNum</code>), giữ mã đơn ≥12 chữ số dạng chữ.</p>
+
+<h3>Sự cố 6 — File HTML bị cắt cụt khi sửa</h3>
+<p><b>Nguyên nhân:</b> công cụ sửa file tự động bị giới hạn kích thước với file ~600 KB.</p>
+<p><b>Cách làm đúng:</b> sửa bằng script (Python/Node), sau đó <b>luôn kiểm tra</b>:</p>
+<pre><code>node -e 'const fs=require("fs"),vm=require("vm");
+const h=fs.readFileSync("index.html","utf8");
+const m=[...h.matchAll(/&lt;script\b[^&gt;]*&gt;([\s\S]*?)&lt;\/script&gt;/gi)].map(x=&gt;x[1]).join("\n;\n");
+new vm.Script(m); console.log("OK", m.length);'</code></pre>
+
+<h2 id="a9">A9 · Lưu trữ đơn cũ (làm nhẹ hệ thống)</h2>
+<p>File <code>luutru.gs</code>, biến <code>LT_GIU_THANG</code> = số tháng giữ lại trong app.</p>
+
+<h3>Quy trình 5 bước — tự dừng nếu lỗi</h3>
+<ol>
+<li>Backup toàn bộ state ra Drive — <i>lỗi thì dừng, không đụng gì</i></li>
+<li>Tính &amp; lưu <code>thangTom</code> (tóm tắt doanh thu từng tháng)</li>
+<li>Ghi chi tiết đơn cũ ra tab <code>DonHang_LuuTru</code> (16 cột)</li>
+<li><b>Đếm lại số dòng đã ghi</b> — thiếu thì dừng, <i>không xoá gì</i></li>
+<li>Thay đơn cũ bằng thẻ <code>_del</code> (~60 byte thay vì ~430 byte)</li>
+</ol>
+
+<table>
+<tr><th style="width:190px">Hàm</th><th>Tác dụng</th></tr>
+<tr><td><code>XEM()</code></td><td>Xem trước: dung lượng, số đơn từng tháng, tháng nào đã/chưa đóng kỳ</td></tr>
+<tr><td><code>CHAY_LUU_TRU()</code></td><td>Chạy dọn thật</td></tr>
+<tr><td><code>DON_THE()</code></td><td>Xoá hẳn thẻ <code>_del</code> — <b>chỉ chạy khi mọi máy đã Tải lại</b></td></tr>
+</table>
+
+<div class="box ok"><b>Sau khi dọn vẫn xem được</b>
+Tổng quan doanh thu từng tháng (từ <code>thangTom</code>) · Theo dõi tồn từng mã theo tháng (từ <code>kyArchive</code>) · Chi tiết đơn cũ (tab <code>DonHang_LuuTru</code>)</div>
+<p><b>Khuyến nghị:</b> chạy <code>CHAY_LUU_TRU()</code> mỗi 2–3 tháng.</p>
+
+<h2 id="a10">A10 · Cấu trúc module giao diện</h2>
+<pre><code>Tổng quan · Sản phẩm · Theo dõi tồn · Xuất–Nhập SX · Xuất kho · Kiểm kho · Dashboard
+                            │                            │           │
+    ┌───────────────────────┘                            │           │
+    ▼ tonSub                                             │           │
+  🎨 Tinh màu · Nguyên liệu · Thành phẩm                  │           │
+                                                         │           │
+    ┌────────────────────────────────────────────────────┘           │
+    ▼ xkSub                                                          │
+  Bán hàng ─ ① Kéo đơn  ② Đồng bộ SKU  ③ Thiết lập quà tặng          │
+             ④ Xuất kho bán hàng  ⑤ Bàn giao VC  ⑥ Hoàn/Hủy          │
+  Nội bộ · Hoạt động · Quà tặng · ⚠ Hàng hư hỏng                     │
+                                                                     │
+    ┌────────────────────────────────────────────────────────────────┘
+    ▼ kkSub / kkSub2
+  ① Chốt  ② Tạo bản kiểm  ③ Đóng kỳ  ⚡ Kiểm nhanh tuần  📚 Lịch sử
+  (mỗi tab lại chia: 🎨 Tinh màu · Nguyên liệu · Thành phẩm)</code></pre>
+
+<p><b>Hàm render chính:</b> <code>rTongquan()</code> <code>rSanpham()</code> <code>rTonkho()</code> <code>rNhapxuat()</code> <code>rXuatkho()</code> <code>rKiemkho()</code> <code>rDashboard()</code></p>
+<p>Điều hướng: <code>go(tab)</code> — chỉ vẽ lại panel đang xem, không vẽ cả 7 panel.</p>
+
+<h3>Ba loại sản phẩm</h3>
+<table>
+<tr><th style="width:130px">Loại</th><th>Ý nghĩa</th><th>Kiểm kho</th></tr>
+<tr><td><code>NVL</code></td><td>Nguyên liệu (base sơn, vỏ thùng, bao bì…)</td><td>Kiểm kho thường + Kiểm nhanh tuần (thứ 6)</td></tr>
+<tr><td><code>Thành phẩm</code></td><td>Hàng bán ra</td><td>Kiểm kho thường</td></tr>
+<tr><td><code>TM</code></td><td><b>Tinh màu</b> — đơn vị lon, dùng để chiết màu sơn</td><td>Cơ chế riêng: đếm thực tế → <b>Chốt tồn tinh màu</b> (đặt Tồn = số đếm)</td></tr>
+</table>
+
+<h3>Module Hàng hư hỏng</h3>
+<p><b>3 nguồn:</b> Hư khi khui thùng (trừ tồn ngay) · Hoàn về bị hư (nhập ở tab ⑥, phần tốt cộng lại tồn, phần hư tách ra) · Khác.</p>
+<p><b>6 trạng thái:</b> Chờ xử lý → Dùng nội bộ / Sửa lại dùng được / Thanh lý / Bỏ đi / Trả NCC.</p>
+<p>Hiện ở cột <b>Hàng hư</b> riêng trong Theo dõi tồn — không lẫn vào Sản xuất.</p>
+
+<h3>Module Kho sơn lẻ</h3>
+<p>Sơn đã chiết màu bị thu hồi từ đơn hủy / hoàn → vào <code>DATA.sonLe</code> với <code>trangthai:'ton'</code>, không cộng thẳng vào tồn thành phẩm.</p>
+
+<hr>
+<h2 id="b1">B1 · Nguồn dữ liệu Dashboard</h2>
+<p>Google Sheet <b>"Thống kê đơn hàng 2026"</b> — ID <code>1jwPEzRMcoYBJywZkW4Vn8dKe_w5hU-zVq51zSoXGY0M</code> (~6 MB)</p>
+<p>Tải bằng CSV export (không tải được xlsx vì quá lớn):</p>
+<pre><code>curl -sL "https://docs.google.com/spreadsheets/d/&lt;FILE_ID&gt;/export?format=csv&amp;gid=&lt;GID&gt;" -o out.csv</code></pre>
+<table>
+<tr><th>Sheet</th><th style="width:140px">GID</th><th>Dùng cho</th></tr>
+<tr><td>ĐH Shopee 1</td><td><code>1202417447</code></td><td>Doanh thu + phí sàn</td></tr>
+<tr><td>ĐH TikTok 1</td><td><code>1316938731</code></td><td>Doanh thu</td></tr>
+<tr><td>ĐH Web 1</td><td><code>1655985613</code></td><td>Doanh thu</td></tr>
+<tr><td>ĐH Lazada 1</td><td><code>1217060636</code></td><td>Doanh thu</td></tr>
+<tr><td>ĐH Shopee (raw)</td><td><code>682713962</code></td><td>Phân loại danh mục</td></tr>
+<tr><td>ĐH TikTok (raw)</td><td><code>1197700667</code></td><td>Phân loại danh mục</td></tr>
+<tr><td>ĐH Web (raw)</td><td><code>1648830276</code></td><td>Danh mục + <b>tên SP</b></td></tr>
+<tr><td>ĐH Lazada (raw)</td><td><code>94383236</code></td><td>Danh mục + <b>tên SP</b></td></tr>
+</table>
+
+<h2 id="b2">B2 · Bẫy dữ liệu cần nhớ</h2>
+<ul>
+<li class="no">Không dùng sheet "Tổng hợp" — số liệu không chính xác</li>
+<li class="no">Không dùng sheet raw để tính tổng doanh thu — mỗi SKU 1 dòng → cộng trùng</li>
+<li><b>Lazada:</b> cột 0 là <code>createTime</code>, <b>không phải</b> mã đơn. Mã đơn ở <b>cột 4</b> (<code>orderNumber</code>)</li>
+<li><b>Web + Lazada 2026:</b> tên sản phẩm <b>trống</b> ở sheet đã xử lý → phải lấy từ sheet raw, map qua mã đơn</li>
+<li><b>TikTok 1:</b> có 2 dòng header → bỏ qua 2 dòng đầu</li>
+<li><b>Định dạng ngày khác nhau:</b> Shopee <code>YYYY-MM-DD HH:MM</code> · TikTok <code>DD/MM/YYYY HH:MM:SS</code> · Web raw <code>DD/MM/YYYY</code> · Lazada raw <code>DD Mon YYYY HH:MM</code></li>
+<li><b>Số Việt Nam:</b> <code>108.000</code> → 108000 (nếu sau dấu chấm đúng 3 chữ số → là phân cách nghìn). Năm có thể là <code>2.025</code> hoặc <code>2025</code></li>
+</ul>
+
+<h2 id="b3">B3 · Cập nhật dashboard</h2>
+<pre><code>python3 update_dashboard.py "đường_dẫn/Dashboard_Loho_House_2026.html"</code></pre>
+<p>Script tải 8 CSV → parse → sinh lại HTML, <b>giữ nguyên giao diện</b>.</p>
+<div class="box danger"><b>⛔ Không tự viết lại code dashboard</b>Chỉ chạy script có sẵn.</div>
+<p><b>Lịch tự động:</b> 9h00 và 15h30 hằng ngày (giờ VN).</p>
+<h3>Phân loại sản phẩm theo tiền tố SKU</h3>
+<table>
+<tr><th style="width:180px">Danh mục</th><th>Tiền tố SKU</th></tr>
+<tr><td>Sàn nhựa</td><td><code>ls-</code></td></tr>
+<tr><td>Sơn</td><td><code>lp-</code></td></tr>
+<tr><td>Công cụ</td><td><code>cc-</code> · <code>l-cc-</code></td></tr>
+<tr><td>Decor</td><td><code>tt-</code> · <code>l-tt-</code></td></tr>
+</table>
+
+<hr>
+<h2 id="c1">C1 · Quy trình triển khai code mới</h2>
+<h3>Frontend (index.html)</h3>
+<ol>
+<li>Trong app: <b>☁ → Sao lưu ngay</b>, đợi "Đã sao lưu"</li>
+<li>Up file mới lên GitHub (ghi đè <code>index.html</code>)</li>
+<li>Đợi 1–2 phút cho GitHub Pages cập nhật</li>
+<li><b>Mọi máy:</b> <code>F5</code> → <b>☁ Tải lại từ Sheets</b></li>
+</ol>
+<h3>Backend (Apps Script)</h3>
+<ol>
+<li>Sửa code → <b>Ctrl+S</b></li>
+<li><b>Triển khai → Quản lý các bản triển khai → ✏️ → Phiên bản: Mới → Triển khai</b></li>
+</ol>
+<div class="box warn"><b>Lưu ý</b>Không tạo deployment mới — URL sẽ đổi, app mất kết nối.</div>
+
+<h2 id="c2">C2 · Kiểm tra sức khoẻ hệ thống</h2>
+<p>Dán vào Console trình duyệt (F12):</p>
+<pre><code>(function(){
+  var kb = Math.round((localStorage.getItem('loho-kho')||'').length/1024);
+  var live = (DATA.orders||[]).filter(function(o){return !o._del;}).length;
+  return JSON.stringify({
+    dungLuongKB : kb,
+    donSong     : live,
+    theDanhDau  : (DATA.orders||[]).length - live,
+    sanPham     : (DATA.products||[]).length,
+    quaTang     : (DATA.gifts||[]).length,
+    quaDangChay : (DATA.gifts||[]).filter(function(g){return g.tt==='Đang chạy';}).length,
+    kyDaDong    : Object.keys(DATA.kyArchive||{}),
+    kyHienHanh  : (typeof curKyYm==='function' ? curKyYm() : '?'),
+    dongBo      : { bat: SYNC.on, lanCuoi: SYNC.last, trangThai: SYNC.status }
+  }, null, 2);
+})()</code></pre>
+<table>
+<tr><th style="width:190px">Chỉ số</th><th>Bình thường</th><th>Cần xử lý</th></tr>
+<tr><td>Dung lượng</td><td class="yes">&lt; 5.000 KB</td><td class="no">&gt; 8.000 KB → chạy lưu trữ</td></tr>
+<tr><td>Đơn sống</td><td class="yes">&lt; 15.000</td><td class="no">&gt; 20.000 → chạy lưu trữ</td></tr>
+<tr><td>Quà đang chạy</td><td class="yes">≤ 5</td><td class="no">Trùng tên+ngày → gộp trùng</td></tr>
+</table>
+
+<h2 id="c3">C3 · Lịch bảo trì</h2>
+<table>
+<tr><th style="width:180px">Tần suất</th><th>Việc</th></tr>
+<tr><td>Hằng ngày</td><td>Kiểm tra kéo đơn Haravan chạy (tab ① có đơn mới)</td></tr>
+<tr><td>Hằng tuần</td><td>Kiểm nhanh tuần nguyên liệu (thứ 6)</td></tr>
+<tr><td>Hằng tháng</td><td>Chốt kiểm kho ngày 25 → đóng kỳ</td></tr>
+<tr><td>2–3 tháng</td><td><code>CHAY_LUU_TRU()</code> để dọn đơn cũ</td></tr>
+<tr><td>Trước mỗi lần deploy</td><td><b>☁ Sao lưu ngay</b></td></tr>
+</table>
+
+<h2 id="c4">C4 · ⛔ Danh sách cấm</h2>
+<table>
+<tr><th style="width:45%">Không được</th><th>Lý do</th></tr>
+<tr><td class="no">Sửa tay ô JSON trong <code>_APP_STATE</code></td><td>Hỏng toàn bộ dữ liệu</td></tr>
+<tr><td class="no">Máy có dữ liệu cũ bấm <b>Sao lưu</b></td><td>Đẩy dữ liệu cũ đè lên máy khác</td></tr>
+<tr><td class="no">Chạy lại <code>khoiPhucQuaTang()</code></td><td>Tạo chương trình quà trùng lặp</td></tr>
+<tr><td class="no">Chạy <code>DON_THE()</code> khi còn máy chưa Tải lại</td><td>Đơn cũ sống lại</td></tr>
+<tr><td class="no">Sửa <code>index.html</code> bằng công cụ giới hạn kích thước</td><td>File bị cắt cụt, app trắng màn hình</td></tr>
+<tr><td class="no">Tạo deployment Apps Script mới thay vì sửa bản cũ</td><td>Đổi URL, app mất kết nối</td></tr>
+<tr><td class="no">Dùng sheet "Tổng hợp" hoặc sheet raw để tính doanh thu</td><td>Số sai / cộng trùng</td></tr>
+<tr><td class="no">Commit <code>HARAVAN_TOKEN</code> lên repo công khai</td><td>Lộ khoá API</td></tr>
+</table>
+
+<h2 id="c5">C5 · Khắc phục sự cố nhanh</h2>
+<table>
+<tr><th style="width:26%">Triệu chứng</th><th style="width:30%">Kiểm tra</th><th>Xử lý</th></tr>
+<tr><td>App trắng màn hình</td><td>F12 → Console xem lỗi</td><td>File HTML bị cắt → up lại bản đủ</td></tr>
+<tr><td>Không đồng bộ</td><td>☁ → <b>🔌 Test kết nối</b></td><td>Sai URL, hoặc deployment chưa cập nhật</td></tr>
+<tr><td>Số liệu khác nhau giữa các máy</td><td>So <code>SYNC.last</code> từng máy</td><td>Máy cũ <b>Tải lại từ Sheets</b></td></tr>
+<tr><td>Dữ liệu biến mất sau khi sync</td><td>Tab backup trên Drive</td><td>Máy cũ đã đè → khôi phục từ backup</td></tr>
+<tr><td>Tồn tháng cũ trống</td><td><code>DATA.kyArchive['&lt;ym&gt;']</code> có không</td><td>Thiếu ảnh tồn → dựng lại từ kỳ kế tiếp</td></tr>
+<tr><td>Quà tặng ra sai số lượng</td><td>Đếm chương trình cùng tên đang chạy</td><td>Gộp trùng</td></tr>
+<tr><td>Đơn "Chưa xuất" dù sàn đã xác nhận</td><td><code>o.tthd</code> — Haravan chưa có vận đơn</td><td>Bật <code>⚠ Cho xuất đơn chưa có VC</code></td></tr>
+<tr><td>Kéo đơn không chạy</td><td>Apps Script → <b>Trình kích hoạt</b></td><td>Trigger bị tắt → bật lại (5 phút/lần)</td></tr>
+</table>
+
+<hr>
+<h2 id="pl">Phụ lục · Bảng tra hàm nhanh</h2>
+<h3>Frontend</h3>
+<table>
+<tr><th style="width:44%">Hàm</th><th>Tác dụng</th></tr>
+<tr><td><code>save()</code></td><td>Ghi localStorage + hẹn đẩy đồng bộ</td></tr>
+<tr><td><code>syncPush(cb)</code> / <code>syncPull(cb, keepKK)</code></td><td>Đẩy lên / kéo về</td></tr>
+<tr><td><code>computeTon()</code> / <code>computeTonMonth(m)</code> / <code>computeTonWindow(a,b,c,d)</code></td><td>Tính tồn</td></tr>
+<tr><td><code>tonCalc(r)</code></td><td>Công thức tồn 1 dòng</td></tr>
+<tr><td><code>skuHe(o)</code></td><td>Ánh xạ SKU sàn → SKU kho</td></tr>
+<tr><td><code>explode(code, qty)</code></td><td>Nổ combo theo BOM</td></tr>
+<tr><td><code>giftFor(o)</code></td><td>Tính quà cho 1 đơn</td></tr>
+<tr><td><code>xkConfirm(madon)</code> / <code>xkConfirmSel()</code></td><td>Xác nhận xuất kho</td></tr>
+<tr><td><code>kkChot()</code> / <code>kkXacNhan()</code> / <code>kkDong()</code></td><td>3 bước kiểm kho</td></tr>
+<tr><td><code>tmKKChot()</code></td><td>Chốt tồn tinh màu</td></tr>
+<tr><td><code>exportXLSX(tableId, name)</code></td><td>Xuất Excel</td></tr>
+</table>
+<h3>Backend</h3>
+<table>
+<tr><th style="width:44%">Hàm</th><th>Tác dụng</th></tr>
+<tr><td><code>doGet(e)</code> / <code>doPost(e)</code></td><td>Điểm cuối HTTP</td></tr>
+<tr><td><code>_readState_()</code> / <code>_writeState_(str)</code></td><td>Đọc/ghi <code>_APP_STATE</code></td></tr>
+<tr><td><code>_mergeState2_(server, incoming, deletes, delTs)</code></td><td>Gộp state</td></tr>
+<tr><td><code>_mergeKK_(a, b)</code></td><td>Gộp kiểm kho</td></tr>
+<tr><td><code>keoDon(daysBack)</code></td><td>Kéo đơn Haravan</td></tr>
+<tr><td><code>_writeTables_(tables)</code></td><td>Sinh các tab để xem</td></tr>
+<tr><td><code>_bkFolder_()</code></td><td>Thư mục backup Drive</td></tr>
+<tr><td><code>XEM()</code> / <code>CHAY_LUU_TRU()</code> / <code>DON_THE()</code></td><td>Lưu trữ đơn cũ</td></tr>
+</table>
+
+<footer>
+<b>Liên hệ chủ hệ thống:</b> emmado@loho-house.vn<br>
+<b>Chủ sở hữu Google Sheets:</b> huyenhoa.forwork@gmail.com<br>
+<b>Cần bổ sung:</b> URL Web App của Apps Script · tên/ID repo GitHub chứa <code>index.html</code>
+</footer>
+</main>
+</div>
+</body>
+</html>
