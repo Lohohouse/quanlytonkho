@@ -20146,6 +20146,14 @@
         var b = kkBd(f, c);
         var q = kkQC(c);
         var tong = kkBdTong(b);
+        /* FIX: đã có số tổng lưu sẵn (dữ liệu cũ, chưa tách lẻ/thùng) -> đưa vào ô Lẻ để hiện ra */
+        if (tong == null) {
+          var _v = (DATA.kk[f] || {})[c];
+          if (_v != null && _v !== "") {
+            b.le = Number(_v) || 0;
+            tong = kkBdTong(b);
+          }
+        }
         var id = _kkid(c);
         var IN = "width:56px;text-align:right;padding:3px 5px;font-size:12px";
         var h =
