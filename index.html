@@ -6040,10 +6040,16 @@
           },
         ],
       };
+      /* VÁ 16/10/2026 — CHẶN DỮ LIỆU MẪU ĐẨY LÊN MÁY CHỦ
+         Máy có bộ nhớ trình duyệt TRỐNG sẽ nạp dữ liệu mẫu bên dưới.
+         Trước đây nó tự đẩy lên Supabase và ĐÈ MẤT số thật (đã xảy ra 10/10, 13/10, 15/10).
+         Nay: bật cờ CHUA_TAI_VE -> syncPush từ chối chạy cho tới khi tải về xong. */
+      var CHUA_TAI_VE = false;
       try {
         const s = localStorage.getItem("loho-kho");
         if (s) Object.assign(DATA, JSON.parse(s));
-      } catch (e) {}
+        else CHUA_TAI_VE = true;
+      } catch (e) { CHUA_TAI_VE = true; }
       if (DATA._seed !== "v5") {
         DATA.orders = [
           {
@@ -9553,6 +9559,13 @@
           cb && cb(false);
           return;
         }
+        /* VÁ 16/10/2026 — không cho máy chưa có dữ liệu đẩy dữ liệu mẫu lên đè số thật */
+        if (typeof CHUA_TAI_VE !== "undefined" && CHUA_TAI_VE) {
+          console.warn("[CHẶN] Máy này chưa tải dữ liệu từ Supabase — không đẩy lên.");
+          syncBadge("err");
+          cb && cb(false);
+          return;
+        }
         if (SYNC.busy || SYNC.loading) {
           // đang bận -> thử lại sau, giữ cờ dirty
           clearTimeout(SYNC.timer);
@@ -9691,6 +9704,8 @@
             }
             var j = res.data;
             var changed = sbApply(j, isFull, keepKK);
+            /* VÁ 16/10/2026 — đã có dữ liệu thật, cho phép đẩy lên trở lại */
+            try { CHUA_TAI_VE = false; } catch (e) {}
             SYNC.cursor = j.now;
             SYNC.last = _sbNow();
             if (changed) _dataVer++;
@@ -18909,6 +18924,12 @@
       function mergeKK(A, B) {
         A = A || {};
         B = B || {};
+        /* VÁ 16/10/2026 — khác KỲ thì lấy nguyên kỳ MỚI HƠN, KHÔNG trộn.
+           Ngăn máy còn ở kỳ cũ kéo ngược kỳ của cả hệ thống. */
+        var _na = A.ngayChot || "", _nb = B.ngayChot || "";
+        if (_na && _nb && _na !== _nb) return (_nb > _na) ? B : A;
+        if (_na && !_nb) return A;
+        if (_nb && !_na) return B;
         var PF = [
           "snap",
           "kk1",
