@@ -18269,6 +18269,44 @@
         }
         return _opCache[madon] || { skus: {}, cats: {} };
       }
+      /* VÁ 23/10/2026 — QUÀ TẶNG THEO SỐ LƯỢNG
+         Đếm số lượng thực mua của từng mã / danh mục trong một đơn.
+         Khác orderProds (chỉ biết CÓ hay KHÔNG), hàm này trả về SỐ LƯỢNG. */
+      var _oqCacheV = -1, _oqCache = null;
+      function orderSL(madon) {
+        if (_oqCacheV !== _dataVer) {
+          _oqCache = {};
+          (DATA.orders || []).forEach(function (x) {
+            if (x._del || x.tt === "Da huy") return;
+            var m = _oqCache[x.madon] || (_oqCache[x.madon] = { skus: {}, cats: {} });
+            var q = +x.sl || 0;
+            if (!q) return;
+            var he;
+            try { he = skuHe(x); } catch (e) { return; }
+            var ds = he.isBase ? [{ code: he.code, qty: q }] : explode(he.code, q);
+            var gop = {};
+            ds.forEach(function (c) { if (c.code) gop[c.code] = (gop[c.code] || 0) + (+c.qty || 0); });
+            if (x.sku && gop[x.sku] == null) gop[x.sku] = q;   /* nhận cả SKU gốc trên sàn */
+            Object.keys(gop).forEach(function (code) {
+              m.skus[code] = (m.skus[code] || 0) + gop[code];
+              var pr = P(code);
+              if (pr && pr.ck) m.cats[pr.ck] = (m.cats[pr.ck] || 0) + gop[code];
+            });
+          });
+          _oqCacheV = _dataVer;
+        }
+        return _oqCache[madon] || { skus: {}, cats: {} };
+      }
+      /* Hệ số nhân quà: 1 = tặng theo ĐƠN; >1 = tặng theo SỐ LƯỢNG mua */
+      function heSoQua(g, o) {
+        if (!g.nhanSL) return 1;
+        var nInc = (g.incSkus || []).length + (g.incCats || []).length;
+        if (!nInc) return 1;                 /* không khai điều kiện -> không nhân được */
+        var sl = orderSL(o.madon), n = 0;
+        (g.incSkus || []).forEach(function (k) { n += sl.skus[k] || 0; });
+        (g.incCats || []).forEach(function (c) { n += sl.cats[c] || 0; });
+        return n > 0 ? n : 1;
+      }
       function inGioWindow(o, g) {
         if (!g.gioTu || !g.gioDen) return true;
         var t = o.gio || "";
@@ -18332,6 +18370,7 @@
               if (!_hasElig) return;
             }
           }
+          var _hs = heSoQua(g, o);   /* VÁ 23/10: 1 = theo đơn · n = theo số lượng mua */
           (g.tiers || []).forEach((tr) => {
             if (tr.nguon !== "Tự áp") return;
             if (!(tr.kenhs || []).includes(o.kenh)) return;
@@ -18342,7 +18381,7 @@
                 if (it.sku)
                   out.push({
                     sku: it.sku,
-                    sl: it.sl || 1,
+                    sl: (it.sl || 1) * _hs,
                     ten: g.ten,
                     nguon: "Tự áp",
                   });
@@ -18562,6 +18601,7 @@
           incSkus: [],
           excCats: [],
           excSkus: [],
+          nhanSL: false,
           tiers: [newTier()],
         };
         renderGiftForm();
@@ -18579,6 +18619,7 @@
           incSkus: (g.incSkus || []).slice(),
           excCats: (g.excCats || []).slice(),
           excSkus: (g.excSkus || []).slice(),
+          nhanSL: !!g.nhanSL,
           tiers: JSON.parse(JSON.stringify(g.tiers)),
         };
         renderGiftForm();
@@ -18596,6 +18637,7 @@
           incSkus: (g.incSkus || []).slice(),
           excCats: (g.excCats || []).slice(),
           excSkus: (g.excSkus || []).slice(),
+          nhanSL: !!g.nhanSL,
           tiers: JSON.parse(JSON.stringify(g.tiers)),
         };
         renderGiftForm();
@@ -18617,6 +18659,7 @@
         if (el("gfDen")) d.den = el("gfDen").value;
         if (el("gfGioTu")) d.gioTu = el("gfGioTu").value;
         if (el("gfGioDen")) d.gioDen = el("gfGioDen").value;
+        if (el("gfNhanSL")) d.nhanSL = el("gfNhanSL").checked;   /* VÁ 23/10 */
         d.tiers.forEach((tr, ti) => {
           if (el("gfFrom" + ti)) tr.from = tienNum(el("gfFrom" + ti).value);
           if (el("gfTo" + ti)) tr.to = el("gfTo" + ti).value;
@@ -18755,6 +18798,18 @@
         <div class="bar" style="gap:6px;margin:4px 0"><select id="gfincCat">${gcOpts}</select><button class="btn" onclick="giftAddCat('inc')">+ Danh mục</button><input list="sysList" id="gfincSku" placeholder="gõ SKU…" style="width:170px"><button class="btn" onclick="giftAddSku('inc')">+ SKU</button></div>
         <div>${giftCondChips("inc")}</div>
       </div>
+      <div style="margin-top:8px;padding:8px 10px;background:#fff8e6;border:1px solid #f0dca8;border-radius:8px">
+        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+          <input type="checkbox" id="gfNhanSL" ${d.nhanSL ? "checked" : ""} onchange="syncDraft();renderGiftForm()" style="margin-top:3px">
+          <span><b style="font-size:12px">Tặng theo SỐ LƯỢNG mua</b>
+            <div class="sub" style="font-size:11px;line-height:1.5">
+              Bỏ tick <b>(mặc định)</b>: mỗi đơn chỉ tặng <b>1 lần</b> — đơn có mã là tặng, mua bao nhiêu cũng tặng 1.<br>
+              Tick: mua 2 tặng 2, mua 3 tặng 3 — nhân theo số lượng của các mã/danh mục khai ở ô <b>CHỈ áp dụng khi đơn có</b> bên trên.
+            </div>
+            ${d.nhanSL && !((d.incSkus||[]).length+(d.incCats||[]).length) ? '<div style="color:#c0392b;font-size:11px;font-weight:600;margin-top:4px">⚠ Chưa khai mã/danh mục ở ô “CHỈ áp dụng khi đơn có” nên vẫn chỉ tặng 1 lần mỗi đơn.</div>' : ''}
+          </span>
+        </label>
+      </div>
       <div style="margin-top:8px"><b style="color:#c0392b;font-size:12px">🚫 KHÔNG áp dụng khi đơn có:</b>
         <div class="bar" style="gap:6px;margin:4px 0"><select id="gfexcCat">${gcOpts}</select><button class="btn" onclick="giftAddCat('exc')">+ Danh mục</button><input list="sysList" id="gfexcSku" placeholder="gõ SKU…" style="width:170px"><button class="btn" onclick="giftAddSku('exc')">+ SKU</button></div>
         <div>${giftCondChips("exc")}</div>
@@ -18821,6 +18876,7 @@
           incSkus: (d.incSkus || []).slice(),
           excCats: (d.excCats || []).slice(),
           excSkus: (d.excSkus || []).slice(),
+          nhanSL: !!d.nhanSL,
           tiers: tiers,
           tt: d.idx >= 0 ? DATA.gifts[d.idx].tt : "Nháp",
         };
