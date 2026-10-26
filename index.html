@@ -13548,6 +13548,26 @@
         prods = tonOrderedProds(prods);
         var dRun = kyDaysRun(tonMonth),
           dd = Math.max(1, dRun);
+        /* VÁ 26/10/2026 — số ngày TIÊU BIỂU để hiện trên tiêu đề cột.
+           Mỗi mã có mốc đầu kỳ riêng nên số ngày có thể khác nhau; lấy giá trị
+           mà ĐA SỐ mã đang dùng (thường là giờ bấm chốt kiểm kho → hôm nay). */
+        var _demNgay = {},
+          _ngayHay = dd.toFixed(1),
+          _dinh = 0;
+        Object.keys(_mw.meta || {}).forEach(function (c) {
+          var mt = _mw.meta[c];
+          if (!mt || !mt.st) return;
+          var v = Math.max(
+            0.5,
+            (Math.min(Date.now(), mt.en || Date.now()) - mt.st) / 86400000,
+          ).toFixed(1);
+          _demNgay[v] = (_demNgay[v] || 0) + 1;
+          if (_demNgay[v] > _dinh) {
+            _dinh = _demNgay[v];
+            _ngayHay = v;
+          }
+        });
+        var ddHien = _ngayHay;
         var Z1 = "#3a4d66",
           Z2 = "#2f6fb0",
           Z3 = "#bf5340",
@@ -13582,7 +13602,7 @@
       <th style="${ss(T1)};width:26px;text-align:center"><input type="checkbox" onclick="tonSelAll(this.checked)" title="Chọn tất cả đang hiện"></th><th style="${ss(T1)}">SKU<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">編號</span></th><th style="${ss(T1)}">Tên sản phẩm <br><span style="font-weight:600;font-size:10.5px;color:#111827">品名</span></th><th style="${ss(T1)}">ĐVT<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">單位</span></th>
       <th class="r" style="${ss(T2)};${GAP}">Tồn đầu kỳ<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">期初</span></th><th class="r" style="${ss(T2)}">Nhập kho<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">進貨</span></th>
       <th class="r" style="${ss(T3)};${GAP}">Bán hàng<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">銷售</span></th><th class="r" style="${ss(T3)}">Nội bộ<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">內部</span></th><th class="r" style="${ss(T3)}">Sản xuất<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">生產</span></th><th class="r" style="${ss(T3)}">Hoạt động<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">活動</span></th><th class="r" style="${ss(T3)}">Quà tặng<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">贈品</span></th><th class="r" style="${ss("#fadbd8")};color:#b03a2e">Hàng hư<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#b03a2e">損壞</span></th><th class="r" style="${ss("#f6d7d1")};font-weight:800">Tổng xuất<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">總出庫</span></th>
-      <th class="r" style="${ss(T4)};${GAP}">Số tồn thực<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">實際庫存</span></th><th class="r" style="${ss(T4)}">TB bán/ngày <span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">日均銷</span><br><span style="font-weight:500;color:#5b6b80">÷ số ngày thực</span></th><th class="r" style="${ss(T4)}">TB dùng/ngày <span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">日均用</span><br><span style="font-weight:500;color:#5b6b80">÷ số ngày thực</span></th><th class="r" style="${ss(T4)}">Ngày còn<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">可用天數</span></th>
+      <th class="r" style="${ss(T4)};${GAP}">Số tồn thực<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">實際庫存</span></th><th class="r" style="${ss(T4)}">TB bán/ngày <span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">日均銷</span><br><span style="font-weight:500;color:#5b6b80">÷ ${ddHien} ngày</span></th><th class="r" style="${ss(T4)}">TB dùng/ngày <span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">日均用</span><br><span style="font-weight:500;color:#5b6b80">÷ ${ddHien} ngày</span></th><th class="r" style="${ss(T4)}">Ngày còn<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">可用天數</span></th>
       <th class="r" style="${ss(T5)};${GAP}">Ngưỡng (ngày)<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">警戒天數</span></th><th style="${ss(T5)};text-align:center">Cảnh báo<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">警示</span></th><th class="r" style="${ss(T6)};${GAP}">SL dự kiến đặt<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">預計訂量</span></th><th style="${ss(T6)}">ĐVT đặt<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">訂貨單位</span></th><th class="r" style="${ss(T6)}">Số ngày dùng<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">可用天數</span></th>
     </tr></thead><tbody>`;
         var nLow = 0,
@@ -13671,7 +13691,7 @@
       <td style="text-align:center;white-space:nowrap"><span draggable="true" ondragstart="tonDragStart(event,'${p.code}')" title="Kéo để dời vị trí mã này" style="cursor:grab;color:#aab3c0;font-size:14px;line-height:1;user-select:none">⣿</span><br><input type="checkbox" data-c="${p.code}" ${tonSel[p.code] ? "checked" : ""} onchange="tonPick('${p.code}',this.checked)"></td><td class="mono">${p.code}</td><td>${nm(p.code)}<br><span class="zh" style="font-size:10.5px;color:#9aa6b6">${zh(p.code) || ""}</span></td><td class="sub">${unit(p.code)}${cv ? '<br><span style="font-size:9.5px;white-space:nowrap;color:#475569">' + cv.per + " " + unit(p.code) + " = 1 " + cv.unit + " <a onclick=\"tonConvModal('" + p.code + '\')" style="cursor:pointer;color:#2563b0;font-weight:700">✎</a></span>' : '<br><button class="btn" style="padding:0 5px;font-size:9px;color:#2563b0" onclick="tonConvModal(\'' + p.code + '\')" title="Thêm quy đổi đơn vị">＋ quy đổi</button>'}</td>
       <td class="r" style="${GAP}">${dim(r.dk)}</td><td class="r" style="color:${r.moi < 0 ? "#c0392b" : "#1e8e4e"};font-weight:600">${r.moi ? (r.moi > 0 ? "+" : "") + num(r.moi) : dash}</td>
       <td class="r" style="${GAP}color:#26344a;font-weight:600">${dim(r.bh)}${mm && r.bh ? '<br><span class="sub" style="font-size:10px">≈ ' + (r.bh / mm).toFixed(2) + " " + cu + "</span>" : ""}</td><td class="r" style="color:#6b7280">${dim(r.nb)}</td><td class="r" style="color:#6b7280">${dim(r.sx)}</td><td class="r" style="color:#6b7280">${dim(r.hd)}</td><td class="r" style="color:#6b7280">${dim(r.qt)}</td><td class="r" style="color:#c0392b;font-weight:600">${r.hh ? num(r.hh) : dash}</td><td class="r" style="font-weight:700;background:#fdf4f3;color:#b03a2e">${out ? num(out) : dash}${mm && out ? '<br><span class="sub" style="font-size:10px;color:#b03a2e">≈ ' + (out / mm).toFixed(2) + " " + cu + "</span>" : ""}</td>
-      <td class="r" style="${GAP}">${dauTrong || _mstate === "empty" ? pill("–", "background:#eef1f5;color:#8893a5") : pill(num(ton), tonBg)}${!dauTrong && mm ? '<br><span class="sub" style="font-size:10px">≈ ' + (ton / mm).toFixed(2) + " " + cu + "</span>" : ""}</td><td class="r" style="color:#26344a">${tbBan || dash}</td><td class="r" style="color:#6b7280">${tbTong || dash}</td><td class="r">${dauTrong || _mstate === "empty" ? pill("–", "background:#eef1f5;color:#8893a5") : pill(con, ngBg)}</td>
+      <td class="r" style="${GAP}">${dauTrong || _mstate === "empty" ? pill("–", "background:#eef1f5;color:#8893a5") : pill(num(ton), tonBg)}${!dauTrong && mm ? '<br><span class="sub" style="font-size:10px">≈ ' + (ton / mm).toFixed(2) + " " + cu + "</span>" : ""}</td><td class="r" style="color:#26344a" title="Chia cho ${(+ddC).toFixed(1)} ngày — tính từ mốc đầu kỳ của mã này">${tbBan || dash}</td><td class="r" style="color:#6b7280" title="Chia cho ${(+ddC).toFixed(1)} ngày — tính từ mốc đầu kỳ của mã này">${tbTong || dash}</td><td class="r">${dauTrong || _mstate === "empty" ? pill("–", "background:#eef1f5;color:#8893a5") : pill(con, ngBg)}</td>
       <td class="r" style="${GAP}"><input type="number" value="${min}" onchange="setTonMin('${p.code}',this.value)" style="width:56px;text-align:right;padding:2px 4px"></td>
       <td style="text-align:center;font-size:12px">${cb}</td><td class="r" style="${GAP}"><input type="number" value="${pQty}" placeholder="SL" onchange="setPlan('${p.code}',this.value)" style="width:74px;text-align:right;padding:2px 4px"></td><td class="sub" style="white-space:nowrap">${ordU}</td><td class="r"><input type="number" value="${pQty && planRate(p.code) > 0 ? Math.round(pQty / planRate(p.code)) : ""}" placeholder="ngày" onchange="setPlanDays('${p.code}',this.value)" style="width:62px;text-align:right;padding:2px 4px"></td>
     </tr>`;
