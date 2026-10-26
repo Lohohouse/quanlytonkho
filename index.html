@@ -12215,7 +12215,10 @@
               var h2 = skuHe({ sku: o.sku, kenh: o.kenh, skuFix: s.skuFix });
               var q = +s.sl || 0;
               if (o.qua) {
-                addG(o, o.ngay, o.dot, h2.code, "qt", q);
+                /* VÁ 26/10/2026 — quà tặng là COMBO phải nổ ra thành phần mới trừ tồn. Lỗi cũ: chỉ nhánh BÁN mới nổ combo, nhánh QUÀ thì không, nên tặng combo đi mà kho không trừ cái nào. */
+                explode(h2.code, q).forEach(function (x) {
+                  addG(o, o.ngay, o.dot, x.code, "qt", x.qty);
+                });
               } else if (h2.isBase) {
                 addG(o, o.ngay, o.dot, h2.code, "bh", q);
               } else {
@@ -12228,7 +12231,9 @@
           }
           var he = skuHe(o);
           if (o.qua) {
-            addG(o, o.ngay, o.dot, he.code, "qt", o.sl);
+            explode(he.code, o.sl).forEach(function (x) {
+              addG(o, o.ngay, o.dot, x.code, "qt", x.qty);
+            });
           } else if (he.isBase) {
             addG(o, o.ngay, o.dot, he.code, "bh", o.sl);
           } else {
@@ -12243,7 +12248,9 @@
           if (o.tt !== "Da xuat" || gd[o.madon]) return;
           gd[o.madon] = 1;
           giftFor(o).forEach((gr) =>
-            addG(o, o.ngay, o.dot, gr.sku, "qt", gr.sl),
+            explode(gr.sku, gr.sl).forEach(function (x) {
+              addG(o, o.ngay, o.dot, x.code, "qt", x.qty);
+            }),
           );
         });
         // NỘI BỘ + HOẠT ĐỘNG (nhập tay)
@@ -12447,7 +12454,9 @@
               var h2 = skuHe({ sku: o.sku, kenh: o.kenh, skuFix: s.skuFix });
               var q = +s.sl || 0;
               if (o.qua) {
-                add(h2.code, "qt", q);
+                explode(h2.code, q).forEach(function (x) {
+                  add(x.code, "qt", x.qty);
+                });
               } else if (h2.isBase) {
                 add(h2.code, "bh", q);
               } else {
@@ -12460,7 +12469,9 @@
           }
           var he = skuHe(o);
           if (o.qua) {
-            add(he.code, "qt", o.sl);
+            explode(he.code, o.sl).forEach(function (x) {
+              add(x.code, "qt", x.qty);
+            });
           } else if (he.isBase) {
             add(he.code, "bh", o.sl);
           } else {
@@ -12475,7 +12486,9 @@
           if (!inW(o, o.ngay, o.dot)) return;
           gd[o.madon] = 1;
           giftFor(o).forEach(function (gr) {
-            add(gr.sku, "qt", gr.sl);
+            explode(gr.sku, gr.sl).forEach(function (x) {
+              add(x.code, "qt", x.qty);
+            });
           });
         });
         (DATA.xnb || []).forEach(function (r) {
@@ -12597,7 +12610,9 @@
               var h2 = skuHe({ sku: o.sku, kenh: o.kenh, skuFix: s.skuFix });
               var q = +s.sl || 0;
               if (o.qua) {
-                addC(o, o.ngay, o.dot, h2.code, "qt", q);
+                explode(h2.code, q).forEach(function (x) {
+                  addC(o, o.ngay, o.dot, x.code, "qt", x.qty);
+                });
               } else if (h2.isBase) {
                 addC(o, o.ngay, o.dot, h2.code, "bh", q);
               } else {
@@ -12610,7 +12625,9 @@
           }
           var he = skuHe(o);
           if (o.qua) {
-            addC(o, o.ngay, o.dot, he.code, "qt", o.sl);
+            explode(he.code, o.sl).forEach(function (x) {
+              addC(o, o.ngay, o.dot, x.code, "qt", x.qty);
+            });
           } else if (he.isBase) {
             addC(o, o.ngay, o.dot, he.code, "bh", o.sl);
           } else {
@@ -12624,7 +12641,9 @@
           if (o.tt !== "Da xuat" || gd[o.madon]) return;
           gd[o.madon] = 1;
           giftFor(o).forEach(function (gr) {
-            addC(o, o.ngay, o.dot, gr.sku, "qt", gr.sl);
+            explode(gr.sku, gr.sl).forEach(function (x) {
+              addC(o, o.ngay, o.dot, x.code, "qt", x.qty);
+            });
           });
         });
         (DATA.xnb || []).forEach(function (r) {
@@ -21680,7 +21699,9 @@
               var h2 = skuHe({ sku: o.sku, kenh: o.kenh, skuFix: s.skuFix });
               var q = +s.sl || 0;
               if (o.qua) {
-                ev.push({ d: o.ngay, c: h2.code, t: "qt", q: q });
+                explode(h2.code, q).forEach(function (x) {
+                  ev.push({ d: o.ngay, c: x.code, t: "qt", q: x.qty });
+                });
               } else if (h2.isBase) {
                 ev.push({ d: o.ngay, c: h2.code, t: "bh", q: q });
               } else {
@@ -21693,7 +21714,9 @@
           }
           var he = skuHe(o);
           if (o.qua) {
-            ev.push({ d: o.ngay, c: he.code, t: "qt", q: +o.sl || 0 });
+            explode(he.code, +o.sl || 0).forEach(function (x) {
+              ev.push({ d: o.ngay, c: x.code, t: "qt", q: x.qty });
+            });
           } else if (he.isBase) {
             ev.push({ d: o.ngay, c: he.code, t: "bh", q: +o.sl || 0 });
           } else {
@@ -21706,7 +21729,9 @@
           if (o.tt !== "Da xuat" || gd[o.madon]) return;
           gd[o.madon] = 1;
           (giftFor(o) || []).forEach(function (gr) {
-            ev.push({ d: o.ngay, c: gr.sku, t: "qt", q: +gr.sl || 0 });
+            explode(gr.sku, +gr.sl || 0).forEach(function (x) {
+              ev.push({ d: o.ngay, c: x.code, t: "qt", q: x.qty });
+            });
           });
         });
         (DATA.xnb || []).forEach(function (r) {
