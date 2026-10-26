@@ -13491,7 +13491,7 @@
     <div class="sp"></div><button class="btn" onclick="tonGroupSelected()" title="Đưa các mã đã tick lại sát nhau">🔗 Gom mã đã chọn</button><button class="btn" onclick="tonResetOrder()" title="Về thứ tự mặc định">↺ Thứ tự gốc</button><button class="btn" onclick="fixKyDongLech()" title="Sửa kỳ đã đóng bị lệch mốc thời gian (tháng cũ trống / tháng mới lẫn số)" style="color:#b9770e">🩹 Sửa kỳ đóng lệch</button><button class="btn" onclick="dongKyNhanh()" title="Đóng kỳ hiện tại sang kỳ mới bằng tồn hệ thống (khi số đếm bị mất/đồng bộ đè)" style="color:#c0392b">⚡ Đóng kỳ 7→8 khẩn cấp</button><button class="btn" onclick="napTKExcel()" title="Nạp tồn đầu kỳ từ file Excel kiểm kho tay — đặt đầu kỳ = số đã đếm" style="color:#1e8e4e">📥 Nạp tồn đầu (Excel KK)</button><input type="file" id="napTKFile" accept=".xlsx,.xls" style="display:none" onchange="napTKFileChosen(this)"><button class="btn" onclick="tonHideSel(true)">🚫 Ẩn đã chọn</button><button class="btn" onclick="tonHideSel(false)">↩ Bỏ ẩn</button><label class="sub" style="display:inline-flex;align-items:center;gap:4px;margin:0 4px"><input type="checkbox" ${tonShowHidden ? "checked" : ""} onchange="tonShowHidden=this.checked;rTonkho()"> Hiện mã đã ẩn</label><button class="btn" onclick="tonM2CatModal()" title="Cấu hình danh mục dùng quy đổi m²">⚙ Quy đổi m²</button><button class="btn gr" onclick="exportXLSX('tblTon','Theo doi ton')">⬇ Xuất Excel 匯出</button></div>
   <div id="tonCount" class="sub" style="margin:0 0 8px;font-weight:500"></div>
   <div class="card scroll"><table id="tblTon"></table></div>
-  <div class="note">Áp tất cả mã SP. <b>Số tồn</b> = Tồn đầu + Tồn mới − Tổng xuất. <b>TB/ngày</b> chia theo số ngày <b>đã chạy</b> trong kỳ (26 → hôm nay). <b>Cảnh báo</b>: dưới ngưỡng (sửa từng mã) → cần đặt thêm; trên 2 tháng → tồn lâu.<br><b>Dời vị trí:</b> kéo biểu tượng <b>⣿</b> ở đầu mỗi dòng thả vào chỗ muốn đặt; hoặc tick nhiều mã rồi bấm <b>🔗 Gom mã đã chọn</b> để đưa chúng sát nhau. Bấm <b>↺ Thứ tự gốc</b> để hoàn tác.</div>`;
+  <div class="note">Áp tất cả mã SP. <b>Số tồn</b> = Tồn đầu + Tồn mới − Tổng xuất. <b>TB/ngày</b> chia theo số ngày thực của <b>từng mã</b>, tính từ mốc đầu kỳ của mã đó (thường là <b>giờ bấm chốt kiểm kho</b>) đến hôm nay — không chia theo ngày 26 của lịch. <b>Cảnh báo</b>: dưới ngưỡng (sửa từng mã) → cần đặt thêm; trên 2 tháng → tồn lâu.<br><b>Dời vị trí:</b> kéo biểu tượng <b>⣿</b> ở đầu mỗi dòng thả vào chỗ muốn đặt; hoặc tick nhiều mã rồi bấm <b>🔗 Gom mã đã chọn</b> để đưa chúng sát nhau. Bấm <b>↺ Thứ tự gốc</b> để hoàn tác.</div>`;
         rTonDraw();
       }
       function rTonDraw() {
@@ -13563,7 +13563,7 @@
       <th style="${ss(T1)};width:26px;text-align:center"><input type="checkbox" onclick="tonSelAll(this.checked)" title="Chọn tất cả đang hiện"></th><th style="${ss(T1)}">SKU<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">編號</span></th><th style="${ss(T1)}">Tên sản phẩm <br><span style="font-weight:600;font-size:10.5px;color:#111827">品名</span></th><th style="${ss(T1)}">ĐVT<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">單位</span></th>
       <th class="r" style="${ss(T2)};${GAP}">Tồn đầu kỳ<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">期初</span></th><th class="r" style="${ss(T2)}">Nhập kho<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">進貨</span></th>
       <th class="r" style="${ss(T3)};${GAP}">Bán hàng<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">銷售</span></th><th class="r" style="${ss(T3)}">Nội bộ<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">內部</span></th><th class="r" style="${ss(T3)}">Sản xuất<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">生產</span></th><th class="r" style="${ss(T3)}">Hoạt động<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">活動</span></th><th class="r" style="${ss(T3)}">Quà tặng<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">贈品</span></th><th class="r" style="${ss("#fadbd8")};color:#b03a2e">Hàng hư<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#b03a2e">損壞</span></th><th class="r" style="${ss("#f6d7d1")};font-weight:800">Tổng xuất<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">總出庫</span></th>
-      <th class="r" style="${ss(T4)};${GAP}">Số tồn thực<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">實際庫存</span></th><th class="r" style="${ss(T4)}">TB bán/ngày <span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">日均銷</span><br><span style="font-weight:500;color:#5b6b80">÷ ${dRun} ngày</span></th><th class="r" style="${ss(T4)}">TB dùng/ngày <span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">日均用</span><br><span style="font-weight:500;color:#5b6b80">÷ ${dRun} ngày</span></th><th class="r" style="${ss(T4)}">Ngày còn<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">可用天數</span></th>
+      <th class="r" style="${ss(T4)};${GAP}">Số tồn thực<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">實際庫存</span></th><th class="r" style="${ss(T4)}">TB bán/ngày <span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">日均銷</span><br><span style="font-weight:500;color:#5b6b80">÷ số ngày thực</span></th><th class="r" style="${ss(T4)}">TB dùng/ngày <span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">日均用</span><br><span style="font-weight:500;color:#5b6b80">÷ số ngày thực</span></th><th class="r" style="${ss(T4)}">Ngày còn<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">可用天數</span></th>
       <th class="r" style="${ss(T5)};${GAP}">Ngưỡng (ngày)<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">警戒天數</span></th><th style="${ss(T5)};text-align:center">Cảnh báo<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">警示</span></th><th class="r" style="${ss(T6)};${GAP}">SL dự kiến đặt<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">預計訂量</span></th><th style="${ss(T6)}">ĐVT đặt<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">訂貨單位</span></th><th class="r" style="${ss(T6)}">Số ngày dùng<br><span class="zh" style="font-weight:600;font-size:10.5px;color:#111827">可用天數</span></th>
     </tr></thead><tbody>`;
         var nLow = 0,
@@ -13597,8 +13597,20 @@
           var pQty = (DATA.plan && DATA.plan[p.code]) || "";
           var out = r.nb + r.hd + r.bh + r.qt + r.sx + (r.hh || 0);
           var ton = r.dk + r.moi - out;
-          var tbBan = +(r.bh / dd).toFixed(2),
-            tbTong = +(out / dd).toFixed(2);
+          /* VÁ 26/10/2026 — chia theo ĐÚNG số ngày mã này đã chạy trong kỳ,
+             tính từ mốc đầu kỳ của chính mã đó (thường là giờ bấm chốt kiểm kho).
+             Lỗi cũ: luôn chia theo ngày 26 của lịch, nên mấy ngày đầu kỳ
+             TB/ngày bị thổi lên gấp đôi và "Ngày còn" báo thiếu hàng oan. */
+          var _mt = _mw.meta && _mw.meta[p.code];
+          var ddC =
+            _mt && _mt.st
+              ? Math.max(
+                  0.5,
+                  (Math.min(Date.now(), _mt.en || Date.now()) - _mt.st) / 86400000,
+                )
+              : dd;
+          var tbBan = +(r.bh / ddC).toFixed(2),
+            tbTong = +(out / ddC).toFixed(2);
           var con = tbTong > 0 ? Math.round(ton / tbTong) : "∞";
           var min = tonMinOf(p.code);
           var het = ton <= 0,
@@ -19012,8 +19024,12 @@
               ? A.ngayChot
               : B.ngayChot;
         out.chotTs = A.chotTs != null ? A.chotTs : B.chotTs;
-        out.lenh = H.lenh || A.lenh || B.lenh || "";
-        out.confirmed = !!(A.confirmed || B.confirmed);
+        /* VÁ 26/10/2026 — cờ "đã xác nhận" và số lệnh kiểm kho phải theo bản
+           MỚI nhất (_tsHead lớn hơn), KHÔNG được cộng dồn kiểu OR/||.
+           Lỗi cũ: một máy còn giữ bản kỳ 6 có confirmed=true thì cờ này
+           sống lại mãi, bản kiểm kho mới vừa tạo đã hiện "Đã xác nhận". */
+        out.lenh = H.lenh != null ? H.lenh : A.lenh != null ? A.lenh : B.lenh || "";
+        out.confirmed = !!H.confirmed;
         out._tsHead = Math.max(ha, hb);
         out.ep = Math.max(A.ep || 0, B.ep || 0);
         var i;
